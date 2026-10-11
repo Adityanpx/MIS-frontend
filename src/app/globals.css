@@ -1,26 +1,330 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ============================================================================
+   PART A — the design tokens from DESIGN-SPEC (Shopeers dashboard). Do not change these values.
+   ========================================================================== */
+@theme {
+  /* Brand blue (primary) */
+  --color-brand-50: #eef3fe; /* active nav pill bg, tinted fills */
+  --color-brand-100: #dce6fd;
+  --color-brand-200: #b9cdfb;
+  --color-brand-300: #8fadf9;
+  --color-brand-400: #5a83f8;
+  --color-brand-500: #2b61f9; /* primary buttons, active bar, links */
+  --color-brand-600: #2450d6; /* hover, chart line */
+  --color-brand-700: #2f4ea8; /* premium card mid */
+  --color-brand-800: #1e346f; /* premium card dark */
+  --color-brand-900: #151724; /* premium card bottom / near-black navy */
+
+  /* Success / green */
+  --color-success-50: #eaf8f0;
+  --color-success-100: #d3f1e0;
+  --color-success-400: #5bcd87;
+  --color-success-500: #47d986;
+  --color-success-600: #2fa864;
+
+  /* Danger / pink-red */
+  --color-danger-50: #fdeef2;
+  --color-danger-500: #e5456f;
+  --color-danger-600: #c0305a;
+
+  /* Warning / orange */
+  --color-warning-500: #ed873d;
+  --color-warning-50: #fef3ea;
+
+  /* Accent / star */
+  --color-star: #f5b82e;
+
+  /* Neutrals (cool grey, slightly blue) */
+  --color-page: #e5e6eb;
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-muted-bg: #f0f1f5;
+  --color-line: #e8e9ee;
+  --color-ink-900: #0b0c10;
+  --color-ink-700: #3e3e40;
+  --color-ink-500: #878590;
+  --color-ink-400: #a3a3ad;
+
+  /* Radius */
+  --radius-card: 20px;
+  --radius-inner: 14px;
+  --radius-control: 12px;
+  --radius-pill: 9999px;
+
+  /* Shadows: very soft, almost invisible */
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 4px 16px rgb(16 24 40 / 0.04);
+  --shadow-float: 0 12px 32px rgb(16 24 40 / 0.1);
+  --shadow-orb: 0 16px 32px rgb(43 97 249 / 0.35);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* ============================================================================
+   PART B — OMMIS additions (same family, consistent saturation; DESIGN-SPEC §1 "extra colors")
+   ========================================================================== */
+@theme {
+  /* Inter is self-hosted through next/font (variable --font-inter set on <html>) */
+  --font-sans: var(--font-inter), 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --color-purple-50: #f2eefe;
+  --color-purple-500: #7c5cfa;
+  --color-purple-600: #6442e8;
+  --color-teal-50: #e6f8f8;
+  --color-teal-500: #22c3c3;
+  --color-yellow-50: #fef8e8;
+  --color-yellow-500: #f5b82e;
+  --color-warning-100: #fce3cf;
+  --color-warning-600: #c96a22;
+  --color-danger-100: #fad4de;
+  --color-ink-300: #c9c9d1;
+  --color-ink-200: #e3e4ea; /* unfilled gauge ticks */
+
+  --radius-shell: 32px;
+  --shadow-ring: 0 0 0 4px rgb(43 97 249 / 0.12);
+
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-float-slow: float 8s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 2.4s ease-in-out infinite;
+  --animate-fade-in: fade-in 0.18s ease-out;
+  --animate-fade-out: fade-out 0.14s ease-in;
+  --animate-pop-in: pop-in 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-pop-out: pop-out 0.12s ease-in;
+
+  @keyframes shimmer {
+    0% {
+      background-position: -400px 0;
+    }
+    100% {
+      background-position: 400px 0;
+    }
+  }
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(var(--tw-rotate, 0deg));
+    }
+    50% {
+      transform: translateY(-10px) rotate(var(--tw-rotate, 0deg));
+    }
+  }
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes pop-out {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.97);
+    }
   }
 }
 
+:root {
+  color-scheme: light;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-page);
+  color: var(--color-ink-700);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer base {
+  /* Every surface uses the same hairline colour (DESIGN-SPEC §5) */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-line);
+  }
+  html,
+  body {
+    height: 100%;
+  }
+  /* Light mode only (decided): the app never follows the OS dark theme */
+  html {
+    background: var(--color-canvas);
+  }
+  ::selection {
+    background: var(--color-brand-100);
+    color: var(--color-ink-900);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-ink-400);
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* ---------- gradients used in the video ---------- */
+.bg-premium {
+  background: linear-gradient(160deg, #2f5bf5 0%, #2f4ea8 45%, #151724 100%);
+}
+.bg-primary-btn {
+  background: linear-gradient(180deg, #3b6ffb 0%, #2b61f9 100%);
+}
+.bg-orb {
+  background: radial-gradient(circle at 35% 30%, #7fb2ff 0%, #2b61f9 45%, #0835aa 100%);
+  box-shadow: var(--shadow-orb);
+}
+.chart-fill {
+  background: linear-gradient(180deg, rgb(43 97 249 / 0.18), rgb(43 97 249 / 0));
+}
+.stat-blue {
+  background: linear-gradient(0deg, rgb(43 97 249 / 0.08), transparent 60%);
+}
+.stat-green {
+  background: linear-gradient(0deg, rgb(91 205 135 / 0.1), transparent 60%);
+}
+.stat-orange {
+  background: linear-gradient(0deg, rgb(237 135 61 / 0.1), transparent 60%);
+}
+.stat-purple {
+  background: linear-gradient(0deg, rgb(124 92 250 / 0.1), transparent 60%);
+}
+.stat-red {
+  background: linear-gradient(0deg, rgb(229 69 111 / 0.1), transparent 60%);
+}
+
+/* ---------- OMMIS utilities ---------- */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* dot-grid texture on the premium card (top-right) and the auth showcase */
+@utility dot-grid {
+  background-image: radial-gradient(rgb(255 255 255 / 0.18) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+@utility dot-grid-ink {
+  background-image: radial-gradient(rgb(43 97 249 / 0.14) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+/* skeleton shimmer */
+@utility skeleton {
+  background-color: var(--color-muted-bg);
+  background-image: linear-gradient(90deg, transparent 0, rgb(255 255 255 / 0.65) 50%, transparent 100%);
+  background-size: 400px 100%;
+  background-repeat: no-repeat;
+  animation: var(--animate-shimmer);
+}
+
+/* thin scrollbars inside cards, drawers, the sidebar */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-300) transparent;
+}
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Radix popper content (dropdowns, popovers, selects, tooltips) */
+.ommis-pop[data-state='open'] {
+  animation: var(--animate-pop-in);
+}
+.ommis-pop[data-state='closed'] {
+  animation: var(--animate-pop-out);
+}
+
+/* Recharts: no focus outline on the svg, smooth cursor */
+.recharts-wrapper,
+.recharts-surface,
+.recharts-wrapper *:focus {
+  outline: none !important;
+}
+.recharts-tooltip-cursor {
+  transition: opacity 120ms;
+}
+
+/* react-day-picker v9 (classNames are applied in components/date/calendar.tsx) */
+.rdp-root {
+  --rdp-accent-color: var(--color-brand-500);
+  --rdp-day-height: 36px;
+  --rdp-day-width: 36px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  /* MIS report and dashboard print on A3 landscape like the Excel (TRD §8.7) */
+  @page {
+    size: A3 landscape;
+    margin: 10mm;
+  }
+  .no-print {
+    display: none !important;
+  }
+  body,
+  html {
+    background: #fff !important;
+  }
+  main > div {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .shadow-card,
+  .shadow-float {
+    box-shadow: none !important;
+  }
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
