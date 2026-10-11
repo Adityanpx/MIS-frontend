@@ -26,7 +26,7 @@ export interface AuthContextValue<P> {
   profile: P | null;
   endReason: EndReason;
   /** pending 2FA challenge after the password step (memory only; lost on reload → back to login). */
-  mfa: { token: string; purpose: 'verify' | 'enrol' } | null;
+  mfa: { token: string; purpose: 'verify' | 'enrol'; devCode?: string } | null;
   isActingAs: boolean;
   /** epoch ms when the act-as token expires (for the countdown banner). */
   actAsExpiresAt: number | null;
@@ -241,7 +241,7 @@ export function createAuth<P>(cfg: AuthConfig<P>) {
       (res: LoginResponse<P>): LoginStep => {
         if (res.mfaRequired) {
           const m = res as MfaChallenge;
-          setMfa({ token: m.mfaToken, purpose: m.mfaPurpose });
+          setMfa({ token: m.mfaToken, purpose: m.mfaPurpose, devCode: m.devCode });
           return m.mfaPurpose;
         }
         applySession(res);

@@ -34,11 +34,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <PremiumCard
               icon={<ReceiptIndianRupee />}
               title="Record a payment"
-              cta="Record payment"
+              cta="Record"
               href="/admin/payments/record"
-            >
-              Cash, NEFT/RTGS, UPI or cheque — allocated to the oldest invoices first.
-            </PremiumCard>
+            />
           }
         />
       )}

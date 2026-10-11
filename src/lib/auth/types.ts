@@ -57,6 +57,8 @@ export interface MfaChallenge {
   mfaRequired: true;
   mfaPurpose: 'verify' | 'enrol';
   mfaToken: string;
+  /** TEMP TESTING (remove before go-live): the API's current code, sent only on non-production builds. */
+  devCode?: string;
 }
 export type LoginResponse<P> = (SessionTokens & P) | MfaChallenge;
 

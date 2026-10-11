@@ -147,6 +147,25 @@ export function TwoFactorForm({ auth, base }: { auth: AuthApi; base: '' | '/admi
         subtitle="Enter the 6-digit code from your authenticator app."
       />
       <div className="space-y-5">
+        {/* TEMP TESTING (remove before go-live): the API only sends devCode on non-production builds. */}
+        {auth.mfa?.devCode && (
+          <div className="border-warning-200 bg-warning-50 text-warning-700 flex items-center justify-between rounded-xl border px-4 py-3 text-sm">
+            <span>
+              Testing code: <span className="font-mono font-semibold tracking-widest">{auth.mfa.devCode}</span>
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setCode(auth.mfa!.devCode!);
+                void submit(auth.mfa!.devCode!);
+              }}
+            >
+              Use this code
+            </Button>
+          </div>
+        )}
         <FormError message={error} />
         <OtpInput value={code} onChange={setCode} onComplete={submit} invalid={!!error} disabled={busy} />
         <Button size="lg" block loading={busy} disabled={code.length !== 6} onClick={() => submit(code)}>

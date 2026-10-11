@@ -11,7 +11,6 @@ import { UserMenu } from '@/components/shell/topbar';
 import { useClientAuth } from '@/lib/auth/client-auth';
 import { defaultPlant } from '@/lib/auth/landing';
 import type { ClientProfile } from '@/lib/auth/types';
-import { fmtDate, fmtMoney0 } from '@/lib/format';
 import { usePublicPlatform } from '@/lib/hooks';
 import { ROLE_LABEL } from '@/lib/permissions';
 import { ActAsBanner, LifecycleBanners } from './banners';
@@ -30,34 +29,14 @@ function SidebarCard({ profile }: { profile: ClientProfile }) {
       <PremiumCard
         icon={<Wallet />}
         title={overdue ? 'Payment overdue' : 'Plan & billing'}
-        cta={overdue ? 'Pay now' : 'View billing'}
+        cta={overdue ? 'Pay now' : 'Billing'}
         href="/billing"
-      >
-        {b ? (
-          Number(b.outstanding) > 0 ? (
-            <>
-              Outstanding <b className="text-white">{fmtMoney0(b.outstanding)}</b>
-              {b.nextDue && <> · next due {fmtDate(b.nextDue)}</>}
-            </>
-          ) : (
-            <>All invoices are paid. Thank you!</>
-          )
-        ) : (
-          'Subscriptions, invoices and receipts for all plants.'
-        )}
-      </PremiumCard>
+      />
     );
   }
   const email = platform.data?.supportEmail;
   return (
-    <PremiumCard
-      icon={<LifeBuoy />}
-      title="Need help?"
-      cta="Contact support"
-      href={email ? `mailto:${email}` : '/profile'}
-    >
-      Questions about a logsheet or report? Our team is one email away.
-    </PremiumCard>
+    <PremiumCard icon={<LifeBuoy />} title="Need help?" cta="Support" href={email ? `mailto:${email}` : '/profile'} />
   );
 }
 
