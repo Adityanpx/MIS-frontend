@@ -1,0 +1,2 @@
+# DO NOT EDIT
+Copied from OMMIS-backend/src/shared by `npm run sync:shared`. Change the backend copy, then re-sync.
