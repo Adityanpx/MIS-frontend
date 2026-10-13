@@ -221,6 +221,25 @@ export function EnrolForm({ auth, base }: { auth: AuthApi; base: '' | '/admin' }
         title="Set up two-step verification"
         subtitle="Your organisation requires an authenticator app (Google Authenticator, Microsoft Authenticator, Authy…)."
       />
+      {/* TEMP TESTING (remove before go-live): the API only sends devCode on non-production builds. */}
+      {secret?.devCode && (
+        <div className="border-warning-200 bg-warning-50 text-warning-700 mb-5 flex items-center justify-between rounded-xl border px-4 py-3 text-sm">
+          <span>
+            Testing code: <span className="font-mono font-semibold tracking-widest">{secret.devCode}</span>
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setCode(secret.devCode!);
+              void submit(secret.devCode!);
+            }}
+          >
+            Use this code
+          </Button>
+        </div>
+      )}
       <ol className="space-y-5">
         <li className="flex gap-4">
           <Step n={1} />

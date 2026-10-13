@@ -68,4 +68,6 @@ export type LoginStep = 'verify' | 'enrol' | 'session';
 export interface EnrolSecret {
   secret: string;
   otpauthUrl: string;
+  /** TEMP TESTING (remove before go-live): only sent by non-production APIs. */
+  devCode?: string;
 }
