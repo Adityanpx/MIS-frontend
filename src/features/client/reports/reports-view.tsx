@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import {
   BarChart3,
@@ -49,7 +49,7 @@ const META: Record<Slug, { icon: LucideIcon; text: string }> = {
   'stock-ledger': { icon: Package, text: 'Opening, received, consumed, adjustments and closing; days of stock left.' },
   'cash-book': { icon: Wallet, text: 'Site cash in, out and in hand, with descriptions.' },
   'lab-compliance': { icon: FlaskConical, text: 'Every lab result outside its limit, by parameter.' },
-  submissions: { icon: CalendarCheck2, text: 'Who submitted each day’s logsheet and which days are missing.' },
+  submissions: { icon: CalendarCheck2, text: "Who submitted each day's logsheet and which days are missing." },
 };
 
 /** Header shared by the 7 reports: title, report switcher, filters and Excel/PDF. */
@@ -581,7 +581,7 @@ function ReportsIndex() {
               <ClipboardList className="size-5" />
             </span>
             <p className="text-ink-900 mt-4 text-base font-semibold">Logsheet calendar</p>
-            <p className="text-ink-500 mt-1 text-sm">Open or fill a day’s logsheet.</p>
+            <p className="text-ink-500 mt-1 text-sm">Open or fill a day's logsheet.</p>
           </Card>
         </Link>
       </div>

@@ -187,6 +187,90 @@ export function ChemicalsCard({ cards, plantId }: { cards: ParamCard[]; plantId:
   );
 }
 
+// ---------------------------------------------------------------------------
+// v1.1 DashboardCard — 3-result lines
+// ---------------------------------------------------------------------------
+
+function ResultLinePill({ line, label }: { line: import('../engine-types').ResultLine; label: string }) {
+  const flagText: Record<string, string> = { ok: 'text-brand-500', bad: 'text-danger-600', neutral: 'text-ink-500' };
+  if (line.pct === null && line.qty === null) return null;
+  return (
+    <div className={cn('flex items-center justify-between py-1 text-[11px]', flagText[line.flag])}>
+      <span className="text-ink-400 font-medium uppercase tracking-wider">{label}</span>
+      <span className="font-semibold">{line.text ?? (line.pct !== null ? `${(line.pct * 100).toFixed(1)}%` : '—')}</span>
+    </div>
+  );
+}
+
+export function DashboardCardV11({
+  card,
+  onOpen,
+}: {
+  card: import('../engine-types').DashboardCard;
+  onOpen?: () => void;
+}) {
+  const Icon = paramIcon(card.code);
+  return (
+    <HoverLift className="h-full">
+      <Card className="flex h-full flex-col" interactive={!!onOpen} onClick={onOpen}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-ink-700 truncate text-sm font-medium">{card.title}</p>
+            <p className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-ink-900 text-[28px] leading-none font-semibold tracking-tight">
+                <CountUp value={card.bigNumber} format={(n) => fmtUnitValue(n, card.unit)} />
+              </span>
+              <span className="text-ink-500 text-xs font-medium">{unitLabel(card.unit)} today</span>
+            </p>
+          </div>
+          <span className="bg-brand-50 text-brand-500 grid size-9 shrink-0 place-items-center rounded-xl">
+            <Icon className="size-[18px]" />
+          </span>
+        </div>
+        <div className="divide-line mt-3 divide-y divide-dashed">
+          <ResultLinePill line={card.results.today} label="Today" />
+          <ResultLinePill line={card.results.mtd} label="MTD" />
+          <ResultLinePill line={card.results.utd} label="UTD" />
+        </div>
+        <div className="mt-2">
+          <EventsChip events={card.events} />
+        </div>
+        <div className="-mx-1 mt-auto pt-4">
+          <p className="text-ink-400 mb-1 px-1 text-[10px] font-medium tracking-wider uppercase">{card.chart.title}</p>
+          <CardMiniChart chart={card.chart} unit={card.unit} height={110} />
+        </div>
+      </Card>
+    </HoverLift>
+  );
+}
+
+export function DashboardCardsV11Grid({
+  cards,
+  plantId,
+}: {
+  cards: import('../engine-types').DashboardCard[];
+  plantId: string;
+}) {
+  const router = useRouter();
+  if (cards.length === 0) return null;
+  return (
+    <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3 2xl:grid-cols-4">
+      {cards.map((c) => (
+        <StaggerItem key={c.code} className="h-full">
+          <DashboardCardV11
+            card={c}
+            onOpen={() =>
+              router.push(
+                c.code === 'REVENUE' ? `/plants/${plantId}/mis` : `/plants/${plantId}/reports/trend?param=${c.code}`,
+              )
+            }
+          />
+        </StaggerItem>
+      ))}
+    </Stagger>
+  );
+}
+
 /** Treated-water quality: one card per outlet parameter with the limit band, result chip and 5-month cone chart. */
 export function QualityGrid({ cards }: { cards: QualityCard[] }) {
   if (cards.length === 0) return null;

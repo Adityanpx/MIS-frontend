@@ -55,9 +55,11 @@ export function ClientShell({ children }: { children: ReactNode }) {
   const commands = useMemo(() => clientCommands(profile, () => void auth.logout()), [profile, auth]);
   const role = profile.user.isClientAdmin
     ? 'Client Admin'
-    : current
-      ? ROLE_LABEL[current.role]
-      : (profile.user.designation ?? '');
+    : profile.user.isManagement
+      ? 'Management'
+      : current
+        ? ROLE_LABEL[current.role]
+        : (profile.user.designation ?? '');
 
   return (
     <AppShell

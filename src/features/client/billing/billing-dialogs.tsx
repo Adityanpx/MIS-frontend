@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { BadgeIndianRupee, FileUp, Landmark, Receipt } from 'lucide-react';
@@ -51,7 +51,7 @@ function FilePick({ file, onFile, label }: { file: File | null; onFile: (f: File
   );
 }
 
-/** CA-12 “I have paid by bank transfer” — the Super Admin verifies it before it counts. */
+/** CA-12 "I have paid by bank transfer" — the Super Admin verifies it before it counts. */
 export function PaidDialog({ invoice, onClose }: { invoice: InvoiceRef | null; onClose: () => void }) {
   const qc = useQueryClient();
   const [v, setV] = useState({ amount: '', paidOn: todayIST() as string | null, reference: '' });

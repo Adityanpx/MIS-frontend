@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import {
   AlertTriangle,
@@ -62,7 +62,7 @@ import type { AdminInvoice, AdminNotification, AdminPayment } from './types';
 
 type Tab = 'payments' | 'notifications';
 
-/** /admin/payments — payments (OFF-01…08) and “I have paid” notifications (CA-12). */
+/** /admin/payments — payments (OFF-01…08) and "I have paid" notifications (CA-12). */
 export function PaymentsView() {
   const sp = useSearchParams();
   const [tab, setTab] = useState<Tab>(sp.get('tab') === 'notifications' ? 'notifications' : 'payments');
@@ -86,7 +86,7 @@ export function PaymentsView() {
         onChange={setTab}
         items={[
           { value: 'payments', label: 'Payments' },
-          { value: 'notifications', label: '“I have paid”', count: pending.data?.length },
+          { value: 'notifications', label: '"I have paid"', count: pending.data?.length },
         ]}
       />
       {tab === 'payments' ? <PaymentsList /> : <NotificationsList />}
@@ -658,7 +658,7 @@ export function RecordPayment() {
   );
 }
 
-// ---------------------------------------------------------------- “I have paid” notifications
+// ---------------------------------------------------------------- "I have paid" notifications
 
 function NotificationsList() {
   const [status, setStatus] = useState<'pending' | 'verified' | 'rejected'>('pending');

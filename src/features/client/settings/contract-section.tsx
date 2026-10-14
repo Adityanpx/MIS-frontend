@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { ChevronDown, Copy, IndianRupee, Percent, PencilLine, Plus, Trash2, TrendingUp } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -149,7 +149,7 @@ export function ContractSection() {
     <div className="space-y-6">
       <SectionHeader
         title="Contract & revenue"
-        description="One row per contract year: the fixed O&M fee and the variable components paid per unit (e.g. BGE power). The dashboard’s revenue figures come from here."
+        description="One row per contract year: the fixed O&M fee and the variable components paid per unit (e.g. BGE power). The dashboard's revenue figures come from here."
         actions={
           <Button
             variant="secondary"

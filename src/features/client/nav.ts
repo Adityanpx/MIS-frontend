@@ -3,6 +3,7 @@ import {
   Building2,
   ClipboardList,
   Download,
+  Factory,
   FilePenLine,
   FileSpreadsheet,
   FileText,
@@ -16,12 +17,13 @@ import {
   UserRound,
   Users,
   Wallet,
+  Wrench,
 } from 'lucide-react';
 import type { CommandItem, NavLink, NavSection } from '@/components/shell/types';
 import type { ClientProfile, PlantAccess } from '@/lib/auth/types';
 import { can } from '@/lib/permissions';
 
-/** The 7 plant reports (PRD RPT-01…12), each a page in File 4. */
+/** The 7 plant reports (PRD RPT-01…12). */
 export const REPORTS = [
   { slug: 'monthly', label: 'Monthly report' },
   { slug: 'custom', label: 'Custom range' },
@@ -53,6 +55,8 @@ export function plantLinks(plant: PlantAccess): NavLink[] {
     links.push({ label: 'Plant settings', href: `${base}/settings`, icon: SlidersHorizontal });
   if (can(role, 'imports.manage'))
     links.push({ label: 'Excel import', href: `${base}/imports`, icon: FileSpreadsheet });
+  // Maintenance link (always visible; the page itself handles access)
+  links.push({ label: 'Maintenance', href: `${base}/maintenance`, icon: Wrench });
   return links;
 }
 
@@ -61,8 +65,46 @@ export function clientNav(
   plant: PlantAccess | null,
 ): { sections: NavSection[]; bottom: NavLink[] } {
   const isCA = profile.user.isClientAdmin;
+  const isMgmt = profile.user.isManagement;
+
+  // Management users get a stripped nav: Portfolio + plant list (read-only)
+  if (isMgmt) {
+    const plantChildren = profile.plants.map((p) => ({
+      label: p.name,
+      href: `/plants/${p.plantId}/dashboard`,
+    }));
+    const sections: NavSection[] = [
+      {
+        items: [
+          { label: 'Portfolio', href: '/company/portfolio', icon: LayoutGrid },
+          ...(plantChildren.length > 0
+            ? [
+                {
+                  label: 'Plants',
+                  href: '/plants',
+                  icon: Factory,
+                  children: plantChildren,
+                } satisfies NavLink,
+              ]
+            : []),
+        ],
+      },
+    ];
+    return {
+      sections,
+      bottom: [{ label: 'My profile', href: '/profile', icon: UserRound }],
+    };
+  }
+
   const sections: NavSection[] = [{ items: [{ label: 'Overview', href: '/', icon: LayoutGrid, exact: true }] }];
+
+  // Portfolio link for Client Admins (above plant section)
+  if (isCA) {
+    sections[0]!.items.push({ label: 'Portfolio', href: '/company/portfolio', icon: Factory });
+  }
+
   if (plant) sections.push({ title: 'Plant', items: plantLinks(plant) });
+
   if (isCA) {
     sections.push({
       title: 'Company',
@@ -85,12 +127,27 @@ export function clientNav(
       ],
     });
   }
+
   return { sections, bottom: [{ label: 'My profile', href: '/profile', icon: Settings }] };
 }
 
 /** ⌘K items for the client area. */
 export function clientCommands(profile: ClientProfile, onLogout: () => void): CommandItem[] {
-  const items: CommandItem[] = [{ id: 'home', group: 'Go to', label: 'Overview', icon: LayoutGrid, href: '/' }];
+  const items: CommandItem[] = [];
+
+  if (profile.user.isManagement) {
+    items.push(
+      { id: 'portfolio', group: 'Go to', label: 'Portfolio', icon: LayoutGrid, href: '/company/portfolio' },
+      { id: 'profile', group: 'Account', label: 'My profile', icon: UserRound, href: '/profile' },
+      { id: 'logout', group: 'Account', label: 'Sign out', icon: LogOut, action: onLogout },
+    );
+    return items;
+  }
+
+  items.push({ id: 'home', group: 'Go to', label: 'Overview', icon: LayoutGrid, href: '/' });
+  if (profile.user.isClientAdmin)
+    items.push({ id: 'portfolio', group: 'Go to', label: 'Portfolio', icon: Factory, href: '/company/portfolio' });
+
   for (const p of profile.plants.filter((x) => x.setupStatus !== 'closed')) {
     for (const l of plantLinks(p)) {
       items.push({

@@ -1,10 +1,11 @@
-'use client';
+﻿'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { ClipboardList, Download, Gauge, LayoutGrid } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
+import { Tabs, type TabItem } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { DateNav } from '@/components/date/date-nav';
 import { PageHeader } from '@/components/shell/page-header';
@@ -23,9 +24,10 @@ import type { DashboardData } from '../engine-types';
 import { usePlantPdf } from '../pdf';
 import { usePlantDate } from '../plant-date';
 import { usePlant } from '../plant-context';
+import { LabTable, MaintenanceTabSection, RegistersTable } from '../mis/mis-tables';
 import { AlertsCard, ComplianceCard } from './insight-cards';
 import { KpiRow } from './kpi-row';
-import { ChemicalsCard, ParamCardsGrid, QualityGrid } from './param-widgets';
+import { ChemicalsCard, DashboardCardsV11Grid, ParamCardsGrid, QualityGrid } from './param-widgets';
 import { CashCard, RegistersCard, StaffCard } from './side-widgets';
 import { Last7Widget, TrendWidget } from './trend-widgets';
 import { toSegments } from './widgets';
@@ -130,7 +132,7 @@ export function DashboardView() {
             <div className="border-warning-100 bg-warning-50 text-ink-700 flex flex-col gap-3 rounded-2xl border px-4 py-3 text-[13px] sm:flex-row sm:items-center">
               <ClipboardList className="text-warning-500 size-5 shrink-0" />
               <span className="flex-1">
-                No logsheet for {fmtDate(reportDate)}. Today’s values are empty; month-to-date and to-date figures still
+                No logsheet for {fmtDate(reportDate)}. Today's values are empty; month-to-date and to-date figures still
                 include every earlier day.
               </span>
               {can('logsheet.edit') && (
@@ -140,24 +142,30 @@ export function DashboardView() {
               )}
             </div>
           )}
-          <Widgets
-            data={d}
-            widgets={widgets}
-            plantId={plant.id}
-            misStart={plant.misStart}
-            date={reportDate}
-            focusCode={layout?.focus ?? null}
-            onFocus={setFocus}
-          />
-          {widgets.length === 0 && (
-            <Card>
-              <EmptyState
-                icon={<LayoutGrid />}
-                title="Your dashboard is empty"
-                description="Add widgets to build your own view of this plant."
-                action={<Button onClick={() => setDrawer(true)}>Add widgets</Button>}
+          {d.tabs ? (
+            <V11DashboardTabs data={d} plantId={plant.id} />
+          ) : (
+            <>
+              <Widgets
+                data={d}
+                widgets={widgets}
+                plantId={plant.id}
+                misStart={plant.misStart}
+                date={reportDate}
+                focusCode={layout?.focus ?? null}
+                onFocus={setFocus}
               />
-            </Card>
+              {widgets.length === 0 && (
+                <Card>
+                  <EmptyState
+                    icon={<LayoutGrid />}
+                    title="Your dashboard is empty"
+                    description="Add widgets to build your own view of this plant."
+                    action={<Button onClick={() => setDrawer(true)}>Add widgets</Button>}
+                  />
+                </Card>
+              )}
+            </>
           )}
         </motion.div>
       )}
@@ -191,12 +199,14 @@ function Widgets({
   focusCode: string | null;
   onFocus: (code: string) => void;
 }) {
-  const all = [...data.keyParameters, ...data.chemicals];
-  const focus = all.find((c) => c.code === focusCode) ?? data.keyParameters.find((c) => c.code !== 'REVENUE') ?? null;
+  const kps = data.keyParameters ?? [];
+  const chems = data.chemicals ?? [];
+  const all = [...kps, ...chems];
+  const focus = all.find((c) => c.code === focusCode) ?? kps.find((c) => c.code !== 'REVENUE') ?? null;
   const render = (id: DashboardWidgetId): ReactNode => {
     switch (id) {
       case 'kpis':
-        return data.keyParameters.length ? <KpiRow cards={data.keyParameters} plantId={plantId} /> : null;
+        return kps.length ? <KpiRow cards={kps} plantId={plantId} /> : null;
       case 'trend':
         return (
           <TrendWidget
@@ -206,7 +216,7 @@ function Widgets({
             focus={focus}
             cards={all}
             onFocus={onFocus}
-            powerCards={data.keyParameters.filter((c) => c.unit.toLowerCase() === 'kwh')}
+            powerCards={kps.filter((c) => c.unit.toLowerCase() === 'kwh')}
           />
         );
       case 'alerts':
@@ -218,17 +228,17 @@ function Widgets({
           <ComplianceCard summary={data.summary} plantId={plantId} />
         ) : null;
       case 'params':
-        return data.keyParameters.length ? <ParamCardsGrid cards={data.keyParameters} plantId={plantId} /> : null;
+        return kps.length ? <ParamCardsGrid cards={kps} plantId={plantId} /> : null;
       case 'chemicals':
-        return data.chemicals.length ? <ChemicalsCard cards={data.chemicals} plantId={plantId} /> : null;
+        return chems.length ? <ChemicalsCard cards={chems} plantId={plantId} /> : null;
       case 'quality':
-        return <QualityGrid cards={data.quality} />;
+        return data.quality ? <QualityGrid cards={data.quality} /> : null;
       case 'cash':
-        return <CashCard cash={data.cash} />;
+        return data.cash ? <CashCard cash={data.cash} /> : null;
       case 'staff':
-        return <StaffCard staff={data.staff} />;
+        return data.staff ? <StaffCard staff={data.staff} /> : null;
       case 'registers':
-        return <RegistersCard registers={data.registers} date={date} />;
+        return data.registers ? <RegistersCard registers={data.registers} date={date} /> : null;
     }
   };
   const item = (id: DashboardWidgetId) => {
@@ -265,5 +275,77 @@ function Widgets({
         );
       })}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// v1.1 tabbed dashboard
+// ---------------------------------------------------------------------------
+type DashTab = 'key' | 'chemicals' | 'compliance' | 'administrative' | 'maintenance';
+
+function V11DashboardTabs({ data, plantId }: { data: DashboardData; plantId: string }) {
+  const tabs = data.tabs!;
+  const labels = data.header.tabLabels ?? {};
+  const [tab, setTab] = useState<DashTab>('key');
+
+  const tabItems: TabItem<DashTab>[] = [
+    { value: 'key', label: labels.key ?? 'Key params' },
+    { value: 'chemicals', label: labels.chemicals ?? 'Chemicals', count: tabs.chemicals.length || undefined },
+    { value: 'compliance', label: labels.compliance ?? 'Compliance' },
+    { value: 'administrative', label: labels.administrative ?? 'Administrative' },
+    ...(tabs.maintenance ? [{ value: 'maintenance' as DashTab, label: labels.maintenance ?? 'Maintenance' }] : []),
+  ];
+
+  return (
+    <div>
+      <Tabs items={tabItems} value={tab} onChange={setTab} className="mb-6" />
+
+      {tab === 'key' && (
+        <div className="space-y-6">
+          <DashboardCardsV11Grid cards={tabs.key} plantId={plantId} />
+          <AlertsCard alerts={data.alerts} plantId={plantId} date={data.header.reportDate} />
+        </div>
+      )}
+
+      {tab === 'chemicals' && (
+        <DashboardCardsV11Grid cards={tabs.chemicals} plantId={plantId} />
+      )}
+
+      {tab === 'compliance' && (
+        <div className="space-y-6">
+          {tabs.compliance.lab.inlet.length > 0 && (
+            <div>
+              <h3 className="text-ink-700 mb-3 text-sm font-semibold">Inlet</h3>
+              <LabTable rows={tabs.compliance.lab.inlet} v11 />
+            </div>
+          )}
+          {tabs.compliance.lab.outlet.length > 0 && (
+            <div>
+              <h3 className="text-ink-700 mb-3 text-sm font-semibold">Outlet</h3>
+              <LabTable rows={tabs.compliance.lab.outlet} v11 />
+            </div>
+          )}
+          {(tabs.compliance.registers.bankGuarantees.length > 0 ||
+            tabs.compliance.registers.insurance.length > 0) && (
+            <RegistersTable registers={tabs.compliance.registers} />
+          )}
+        </div>
+      )}
+
+      {tab === 'administrative' && (
+        <div className="grid gap-6 xl:grid-cols-2">
+          {tabs.administrative.staff.length > 0 && (
+            <StaffCard staff={tabs.administrative.staff} />
+          )}
+          {tabs.administrative.cash && (
+            <CashCard cash={tabs.administrative.cash} />
+          )}
+        </div>
+      )}
+
+      {tab === 'maintenance' && tabs.maintenance && (
+        <MaintenanceTabSection data={tabs.maintenance} plantId={plantId} />
+      )}
+    </div>
   );
 }

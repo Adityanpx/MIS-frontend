@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { CheckCircle2, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -19,7 +19,7 @@ export function AlertsCard({ alerts, plantId, date }: { alerts: PlantAlert[]; pl
   return (
     <Card>
       <CardHeader
-        title="Today’s alerts"
+        title="Today's alerts"
         subtitle={
           alerts.length ? `${alerts.length} item${alerts.length > 1 ? 's' : ''} need a look` : 'Report date checks'
         }

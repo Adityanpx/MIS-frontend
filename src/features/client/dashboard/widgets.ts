@@ -1,4 +1,4 @@
-import type { DashboardWidgetId } from '@/shared/schemas/dashboard';
+﻿import type { DashboardWidgetId } from '@/shared/schemas/dashboard';
 
 export type WidgetSpan = 'full' | 'main' | 'side';
 export type PreviewKind =
@@ -18,7 +18,7 @@ export const WIDGETS: Record<DashboardWidgetId, WidgetMeta> = {
   kpis: {
     id: 'kpis',
     title: 'Key figures',
-    description: 'Today’s headline parameters and revenue with MTD change against standard.',
+    description: "Today's headline parameters and revenue with MTD change against standard.",
     tag: 'Overview',
     span: 'full',
     preview: 'kpi',
@@ -33,7 +33,7 @@ export const WIDGETS: Record<DashboardWidgetId, WidgetMeta> = {
   },
   alerts: {
     id: 'alerts',
-    title: 'Today’s alerts',
+    title: "Today's alerts",
     description: 'Lab exceedances, low stock, expiring guarantees, cash, staff and safety gaps.',
     tag: 'Attention',
     span: 'side',

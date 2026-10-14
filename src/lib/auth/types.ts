@@ -20,6 +20,7 @@ export interface ClientProfile {
     mobile: string | null;
     designation: string | null;
     isClientAdmin: boolean;
+    isManagement: boolean;   // v1.1: read-only portfolio viewer across the company
     totpEnabled: boolean;
   };
   tenant: {

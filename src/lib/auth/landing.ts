@@ -42,13 +42,17 @@ export function gateFor(p: ClientProfile, pathname: string): string | null {
 
 /**
  * PRD AUTH-09 landing page after sign-in:
- *  Client Admin → company home · Editor → logsheet of the default plant · Checker/Verifier/Viewer → dashboard.
+ *  Management        → /company/portfolio
+ *  Client Admin      → overview (/)
+ *  Editor            → logsheet of the default plant
+ *  Checker/Verifier/Viewer → dashboard
  */
 export function landingPath(p: ClientProfile, next?: string | null): string {
   const gate = gateFor(p, '');
   if (gate) return gate;
   const target = safeNext(next, 'client');
   if (target && !['/login', '/act-as'].some((x) => target.startsWith(x))) return target;
+  if (p.user.isManagement) return '/company/portfolio';
   if (p.user.isClientAdmin) return '/';
   const plant = defaultPlant(p);
   if (!plant) return '/';

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { ArrowDownUp, Package, PencilLine, Plus, Power } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -146,7 +146,7 @@ export function StockSection() {
     <div className="space-y-6">
       <SectionHeader
         title="Chemicals & stock"
-        description="Each item adds a consumed and a received row to the logsheet. Closing stock = yesterday’s closing − consumed + received, from the opening balance."
+        description="Each item adds a consumed and a received row to the logsheet. Closing stock = yesterday's closing − consumed + received, from the opening balance."
         actions={
           <Button onClick={() => openForm(null)}>
             <Plus /> Add stock item

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import {
   BadgeIndianRupee,
@@ -496,7 +496,7 @@ function CancelInvoiceDialog({ inv, onClose }: { inv: AdminInvoiceDetail; onClos
       }}
     >
       <label className="rounded-inner border-line flex items-center justify-between gap-3 border p-3">
-        <span className="text-ink-900 text-sm">Put the schedule year back to “planned” (re-invoice later)</span>
+        <span className="text-ink-900 text-sm">Put the schedule year back to "planned" (re-invoice later)</span>
         <Switch checked={release} onCheckedChange={setRelease} aria-label="Release schedule" />
       </label>
     </ReasonDialog>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ChevronDown, History, LifeBuoy } from 'lucide-react';
@@ -36,7 +36,7 @@ const ENTITIES = [
   { value: 'client', label: 'Company' },
   { value: 'invoice', label: 'Invoices' },
   { value: 'payment', label: 'Payments' },
-  { value: 'payment_notification', label: '“I have paid” notices' },
+  { value: 'payment_notification', label: '"I have paid" notices' },
   { value: 'tds', label: 'TDS' },
   { value: 'export', label: 'Exports' },
 ];
@@ -154,7 +154,7 @@ export function AuditView() {
                     </p>
                     <p className="text-ink-500 truncate text-xs">
                       {a.entity}
-                      {a.reason && <> · “{a.reason}”</>}
+                      {a.reason && <> · "{a.reason}"</>}
                     </p>
                   </div>
                   {a.actor.viaSupportSession && (

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import {
   AlertTriangle,
@@ -347,7 +347,7 @@ export function BillingOverview() {
                 ))}
             </dl>
             <p className="text-ink-400 mt-4 text-xs">
-              After paying, use “I have paid” on the invoice so we can match it quickly.
+              After paying, use "I have paid" on the invoice so we can match it quickly.
             </p>
           </Card>
           {pending.length > 0 && (
@@ -717,7 +717,7 @@ export function PaymentsView() {
           onChange={setTab}
           items={[
             { value: 'payments', label: 'Payments', count: pays.data?.length },
-            { value: 'notices', label: '“I have paid” notices', count: notes.data?.length },
+            { value: 'notices', label: '"I have paid" notices', count: notes.data?.length },
             { value: 'credit', label: `Advance ${credit.data ? fmtMoney0(credit.data.balance) : ''}` },
           ]}
         />

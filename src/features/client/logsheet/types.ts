@@ -1,4 +1,4 @@
-/** Exact shapes of /plants/:plantId/logsheets/* (backend Phase 2 §6.4 logsheets.service.ts). */
+﻿/** Exact shapes of /plants/:plantId/logsheets/* (backend Phase 2 §6.4 logsheets.service.ts). */
 
 export type LogStatus = 'draft' | 'submitted' | 'corrected' | 'returned' | 'checked' | 'verified';
 export type DayStatus = LogStatus | 'missing' | 'future' | 'not_allowed';
@@ -159,7 +159,7 @@ export const BLOCK_REASON_TEXT: Record<DateBlockReason, { title: string; text: s
   },
   FUTURE_DATE: {
     title: 'Not open yet',
-    text: 'A day’s logsheet opens once the day is over (same-day entry is switched off for this plant).',
+    text: "A day's logsheet opens once the day is over (same-day entry is switched off for this plant).",
   },
   PLANT_NOT_LIVE: {
     title: 'Plant is not live yet',

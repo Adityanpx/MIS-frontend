@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { AlertTriangle, CheckCircle2, FileDown, History, Send, Table2, X } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -319,7 +319,7 @@ export function HistoryDrawer({
                 </span>
               </div>
               <p className="rounded-inner bg-canvas text-ink-700 mt-2 px-3 py-2 text-[13px] italic">
-                “{rows[0]?.reason}”
+                "{rows[0]?.reason}"
               </p>
               <ul className="mt-2 space-y-1.5">
                 {rows.map((r) => (

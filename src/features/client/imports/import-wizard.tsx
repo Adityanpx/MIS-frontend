@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -297,7 +297,7 @@ function UploadStep({ onUploaded }: { onUploaded: (id: string) => void }) {
         <CardHeader title="What happens next" />
         <ol className="space-y-4">
           {[
-            ['Nothing is saved yet', 'We read every row and check it against this plant’s parameters and limits.'],
+            ['Nothing is saved yet', "We read every row and check it against this plant's parameters and limits."],
             [
               'You review the report',
               'Errors, numbers stored as text, dates that already have a logsheet, unknown columns.',
@@ -732,7 +732,7 @@ export function ImportWizard() {
       return (
         <Working
           title="Checking the workbook…"
-          text="Reading every row and checking it against this plant’s parameters, limits and existing logsheets."
+          text="Reading every row and checking it against this plant's parameters, limits and existing logsheets."
         />
       );
     if (job.status === 'applying')

@@ -5,7 +5,16 @@ import { clientApi } from '@/lib/api';
 import { useClientAuth } from '@/lib/auth/client-auth';
 import { qk } from '@/lib/query/keys';
 import type { DashboardLayout, DashboardWidgetId } from '@/shared/schemas/dashboard';
-import type { DashboardData, MisReport, Overview, PdfDoc, ReportTable, TrendRow } from './engine-types';
+import type {
+  DashboardData,
+  MaintenanceTabPayload,
+  MisReport,
+  Overview,
+  PdfDoc,
+  PortfolioRow,
+  ReportTable,
+  TrendRow,
+} from './engine-types';
 
 const useSignedIn = () => useClientAuth().status === 'authenticated';
 const ENGINE_STALE = 60_000; // TRD §8.11: MIS / dashboard 1 minute
@@ -27,7 +36,7 @@ export function useDashboard(plantId: string, date: string | null) {
     queryFn: () => clientApi.get<DashboardData>(`/plants/${plantId}/dashboard`, { query: { date } }),
     enabled: useSignedIn(),
     staleTime: ENGINE_STALE,
-    placeholderData: keepPreviousData, // keep the old day on screen while the next one loads (no flash)
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -67,7 +76,7 @@ export function useDashboardLayout(plantId: string) {
   });
 }
 
-/** Saves the layout; the cache is updated first so the dashboard re-arranges instantly (a UI preference, not data). */
+/** Saves the layout; the cache is updated first so the dashboard re-arranges instantly. */
 export function useSaveLayout(plantId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -91,5 +100,38 @@ export function usePdfList(plantId: string, year: number, month: number, enabled
     queryFn: () => clientApi.get<PdfDoc[]>(`/plants/${plantId}/pdfs`, { query: { year, month } }),
     enabled: useSignedIn() && enabled,
     staleTime: 30_000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// v1.1 queries
+// ---------------------------------------------------------------------------
+
+export interface PortfolioResponse {
+  reportDate: string;
+  rows: PortfolioRow[];
+  exceptions: Array<{ plantId: string; type: string; detail: string }>;
+}
+
+export function usePortfolio(
+  date: string,
+  standard: 'bidding' | 'actual' | 'primary' = 'primary',
+) {
+  return useQuery({
+    queryKey: qk.client.portfolio(date, standard),
+    queryFn: () =>
+      clientApi.get<PortfolioResponse>('/company/portfolio', { query: { date, standard } }),
+    enabled: useSignedIn() && !!date,
+    staleTime: 30_000,
+  });
+}
+
+export function useMaintenanceTab(plantId: string, date: string) {
+  return useQuery({
+    queryKey: qk.client.maintenanceTab(plantId, date),
+    queryFn: () =>
+      clientApi.get<MaintenanceTabPayload>(`/plants/${plantId}/maintenance`, { query: { date } }),
+    enabled: useSignedIn() && !!date,
+    staleTime: ENGINE_STALE,
   });
 }

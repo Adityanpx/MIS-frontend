@@ -38,6 +38,17 @@ export const qk = {
     companyExports: ['c', 'company', 'exports'] as const,
     billing: (part: string, query?: Record<string, unknown>) => ['c', 'billing', part, query ?? {}] as const,
     invoice: (id: string) => ['c', 'billing', 'invoice', id] as const,
+    // v1.1
+    portfolio: (date: string, standard: string) => ['c', 'portfolio', date, standard] as const,
+    maintenanceTab: (plantId: string, date: string) =>
+      ['c', 'plant', plantId, 'maintenance', 'tab', date] as const,
+    breakdowns: (plantId: string, filters: unknown) =>
+      ['c', 'plant', plantId, 'maintenance', 'breakdowns', filters] as const,
+    breakdown: (plantId: string, id: string) =>
+      ['c', 'plant', plantId, 'maintenance', 'breakdowns', id] as const,
+    equipment: (plantId: string) => ['c', 'plant', plantId, 'maintenance', 'equipment'] as const,
+    equipmentById: (plantId: string, id: string) =>
+      ['c', 'plant', plantId, 'maintenance', 'equipment', id] as const,
   },
   admin: {
     all: ['a'] as const,

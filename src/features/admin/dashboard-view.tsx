@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import {
   AlertTriangle,
@@ -323,7 +323,7 @@ function ActionListCard({
     },
     {
       key: 'notifications',
-      label: '“I have paid” to verify',
+      label: '"I have paid" to verify',
       count: counts?.paymentNotifications ?? 0,
       href: '/admin/payments?tab=notifications',
       icon: <ClipboardCheck />,

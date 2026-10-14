@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Banknote, BellRing, Coins, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -84,7 +84,7 @@ export function CashSection() {
     <div className="space-y-6">
       <SectionHeader
         title="Site cash"
-        description="Cash in hand = yesterday’s cash − expenses + cash received, starting from the opening balance. Expenses above the alert limit are flagged on the logsheet and the dashboard."
+        description="Cash in hand = yesterday's cash − expenses + cash received, starting from the opening balance. Expenses above the alert limit are flagged on the logsheet and the dashboard."
       />
       <div className="grid gap-6 sm:grid-cols-3">
         {tiles.map((t) => (

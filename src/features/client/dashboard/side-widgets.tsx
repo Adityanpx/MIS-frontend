@@ -12,7 +12,11 @@ import { cn } from '@/lib/utils';
 import type { DashboardData, RegisterRow } from '../engine-types';
 import { CardMiniChart } from './parts';
 
-export function CashCard({ cash }: { cash: DashboardData['cash'] }) {
+type CashData = NonNullable<DashboardData['cash']>;
+type StaffData = NonNullable<DashboardData['staff']>;
+type RegistersData = NonNullable<DashboardData['registers']>;
+
+export function CashCard({ cash }: { cash: CashData }) {
   const rows = [
     { label: 'Spent today', value: cash.today },
     { label: 'This month', value: cash.mtd },
@@ -48,7 +52,7 @@ export function CashCard({ cash }: { cash: DashboardData['cash'] }) {
   );
 }
 
-export function StaffCard({ staff }: { staff: DashboardData['staff'] }) {
+export function StaffCard({ staff }: { staff: StaffData }) {
   const present = staff.reduce((s, r) => s + (r.present ?? 0), 0);
   const absent = staff.reduce((s, r) => s + (r.absent ?? 0), 0);
   const tones = ['blue', 'green', 'orange', 'purple'] as const;
@@ -104,7 +108,7 @@ const REG_LABEL: Record<RegisterRow['status'], string> = {
   NOT_AVAILABLE: 'Not on file',
 };
 
-export function RegistersCard({ registers, date }: { registers: DashboardData['registers']; date: string }) {
+export function RegistersCard({ registers, date }: { registers: RegistersData; date: string }) {
   const rows = [
     ...registers.bankGuarantees.map((r) => ({ ...r, group: 'Bank guarantee' })),
     ...registers.insurance.map((r) => ({ ...r, group: 'Insurance' })),
