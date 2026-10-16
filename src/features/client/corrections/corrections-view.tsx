@@ -110,7 +110,7 @@ function RequestCard({
             </div>
           )}
         </div>
-        <p className="rounded-inner bg-canvas text-ink-700 mt-4 px-4 py-3 text-sm italic">"{req.reason}"</p>
+        <p className="rounded-inner bg-canvas text-ink-700 mt-4 px-4 py-3 text-sm italic">&quot;{req.reason}&quot;</p>
         <div className="mt-4">
           <ChangeTable plantId={plantId} req={req} />
         </div>
@@ -118,7 +118,7 @@ function RequestCard({
           <p className="text-ink-500 mt-3 text-xs">
             {req.status === 'approved' ? 'Approved' : 'Rejected'} by {req.decided_by ?? '—'} ·{' '}
             {fmtDateTime(req.decided_at)}
-            {req.comment && <span className="text-ink-700"> — "{req.comment}"</span>}
+            {req.comment && <span className="text-ink-700"> — &quot;{req.comment}&quot;</span>}
           </p>
         )}
       </Card>
@@ -198,7 +198,7 @@ export function CorrectionsView() {
           ]}
         />
         <p className="text-ink-500 text-xs">
-          Approving applies the values with the Editor's reason and recalculates the reports.
+          Approving applies the values with the Editor&apos;s reason and recalculates the reports.
         </p>
       </div>
       {q.isLoading ? (

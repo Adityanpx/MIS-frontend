@@ -154,7 +154,7 @@ export function AuditView() {
                     </p>
                     <p className="text-ink-500 truncate text-xs">
                       {a.entity}
-                      {a.reason && <> · "{a.reason}"</>}
+                      {a.reason && <> · &quot;{a.reason}&quot;</>}
                     </p>
                   </div>
                   {a.actor.viaSupportSession && (

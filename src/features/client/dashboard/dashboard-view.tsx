@@ -132,7 +132,7 @@ export function DashboardView() {
             <div className="border-warning-100 bg-warning-50 text-ink-700 flex flex-col gap-3 rounded-2xl border px-4 py-3 text-[13px] sm:flex-row sm:items-center">
               <ClipboardList className="text-warning-500 size-5 shrink-0" />
               <span className="flex-1">
-                No logsheet for {fmtDate(reportDate)}. Today's values are empty; month-to-date and to-date figures still
+                No logsheet for {fmtDate(reportDate)}. Today&apos;s values are empty; month-to-date and to-date figures still
                 include every earlier day.
               </span>
               {can('logsheet.edit') && (
