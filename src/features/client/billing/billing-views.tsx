@@ -347,7 +347,7 @@ export function BillingOverview() {
                 ))}
             </dl>
             <p className="text-ink-400 mt-4 text-xs">
-              After paying, use "I have paid" on the invoice so we can match it quickly.
+              After paying, use &quot;I have paid&quot; on the invoice so we can match it quickly.
             </p>
           </Card>
           {pending.length > 0 && (
