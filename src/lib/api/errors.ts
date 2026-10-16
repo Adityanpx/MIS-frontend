@@ -32,6 +32,9 @@ const OVERRIDES: Record<string, string> = {
   ORIGIN_NOT_ALLOWED: 'This site is not allowed to talk to the API (check CORS_ORIGINS on the API).',
   STALE_VERSION: 'Someone else saved this in the meantime. Reload to see the latest version.',
   ACT_AS_READ_ONLY: 'This support session is read-only.',
+  HTTP_502: 'The server is starting up. Please wait a few seconds and try again.',
+  HTTP_503: 'The server is starting up. Please wait a few seconds and try again.',
+  HTTP_504: 'The server is starting up. Please wait a few seconds and try again.',
 };
 
 /** The text to show in a toast or under a form. */

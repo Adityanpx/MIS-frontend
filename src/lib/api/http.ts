@@ -75,6 +75,10 @@ export interface ApiClient {
   ): Promise<void>;
 }
 
+const TRANSIENT_STATUSES = new Set([502, 503, 504]);
+const RETRY_BACKOFF = [600, 1500, 3000, 5000];
+const sleepMs = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 export function createApiClient(cfg: { name: 'client' | 'admin'; baseUrl: string; refreshPath: string }): ApiClient {
   let token: string | null = null;
   let refreshEnabled = true;
@@ -111,46 +115,59 @@ export function createApiClient(cfg: { name: 'client' | 'admin'; baseUrl: string
     if (opts.idempotencyKey)
       headers.set('Idempotency-Key', opts.idempotencyKey === true ? newId() : opts.idempotencyKey);
 
-    let res: Response;
-    try {
-      res = await fetch(url(path, opts.query), {
-        method,
-        headers,
-        body,
-        credentials: 'include',
-        cache: 'no-store',
-        signal: opts.signal,
-      });
-    } catch (e) {
-      if (e instanceof Error && e.name === 'AbortError') throw e;
-      throw new ApiError(0, 'NETWORK_ERROR', 'Cannot reach the server.');
-    }
-    if (res.ok) return res;
+    // Only retry-safe requests: GETs, auth calls, or explicitly idempotent writes.
+    const canRetry = method === 'GET' || path.includes('/auth/') || !!opts.idempotencyKey;
 
-    const payload = (await res.json().catch(() => null)) as {
-      error?: { code?: string; message?: string; details?: Record<string, unknown>; requestId?: string };
-    } | null;
-    const e = payload?.error;
-    const err = new ApiError(
-      res.status,
-      e?.code ?? `HTTP_${res.status}`,
-      e?.message ?? res.statusText,
-      e?.details,
-      e?.requestId,
-    );
+    for (let tryNo = 0; ; tryNo++) {
+      let res: Response;
+      try {
+        res = await fetch(url(path, opts.query), {
+          method,
+          headers,
+          body,
+          credentials: 'include',
+          cache: 'no-store',
+          signal: opts.signal,
+        });
+      } catch (e) {
+        if (e instanceof Error && e.name === 'AbortError') throw e;
+        if (canRetry && tryNo < RETRY_BACKOFF.length) { await sleepMs(RETRY_BACKOFF[tryNo]); continue; }
+        throw new ApiError(0, 'NETWORK_ERROR', 'Cannot reach the server.');
+      }
 
-    if (res.status === 401 && err.code === 'TOKEN_EXPIRED' && !opts.skipRefresh && attempt === 0) {
-      const fresh = await refresh();
-      if (fresh) return send(method, path, opts, 1);
-      events.onAuthLost?.('TOKEN_EXPIRED');
+      if (res.ok) return res;
+
+      // Transient gateway errors: retry silently before surfacing to the user.
+      if (TRANSIENT_STATUSES.has(res.status) && canRetry && tryNo < RETRY_BACKOFF.length) {
+        await sleepMs(RETRY_BACKOFF[tryNo]);
+        continue;
+      }
+
+      const payload = (await res.json().catch(() => null)) as {
+        error?: { code?: string; message?: string; details?: Record<string, unknown>; requestId?: string };
+      } | null;
+      const e = payload?.error;
+      const err = new ApiError(
+        res.status,
+        e?.code ?? `HTTP_${res.status}`,
+        e?.message ?? res.statusText,
+        e?.details,
+        e?.requestId,
+      );
+
+      if (res.status === 401 && err.code === 'TOKEN_EXPIRED' && !opts.skipRefresh && attempt === 0) {
+        const fresh = await refresh();
+        if (fresh) return send(method, path, opts, 1);
+        events.onAuthLost?.('TOKEN_EXPIRED');
+        throw err;
+      }
+      if (res.status === 401 && !opts.skipAuth && (SESSION_LOST_CODES as readonly string[]).includes(err.code)) {
+        events.onAuthLost?.(err.code);
+      }
+      if (res.status === 423) events.onAccountState?.(err);
+      if (res.status === 403 && err.code === 'TERMS_NOT_ACCEPTED') events.onTermsRequired?.();
       throw err;
     }
-    if (res.status === 401 && !opts.skipAuth && (SESSION_LOST_CODES as readonly string[]).includes(err.code)) {
-      events.onAuthLost?.(err.code);
-    }
-    if (res.status === 423) events.onAccountState?.(err);
-    if (res.status === 403 && err.code === 'TERMS_NOT_ACCEPTED') events.onTermsRequired?.();
-    throw err;
   }
 
   async function json<T>(res: Response): Promise<{ data: T; meta?: PageMeta }> {
