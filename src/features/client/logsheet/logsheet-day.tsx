@@ -124,7 +124,7 @@ function EntrySide({ form, ed, onSubmit }: { form: LogsheetForm; ed: LogsheetEdi
           <span className="text-ink-900 tabular absolute text-lg font-bold">{pct}%</span>
         </div>
         <div className="min-w-0">
-          <p className="text-ink-900 text-base font-semibold">Today's entry</p>
+          <p className="text-ink-900 text-base font-semibold">Today&apos;s entry</p>
           <p className="text-ink-500 text-xs">
             {ed.progress.filled} of {ed.progress.total} required values
           </p>
@@ -272,7 +272,7 @@ function SubmittedSide({
           <dt className="text-ink-500">Source</dt>
           <dd className="text-ink-900 font-medium">{l.source === 'import' ? 'Excel import' : 'Entered online'}</dd>
         </div>
-        {l.remarks && <p className="text-ink-700 border-line border-t pt-2 italic">"{l.remarks}"</p>}
+        {l.remarks && <p className="text-ink-700 border-line border-t pt-2 italic">&quot;{l.remarks}&quot;</p>}
       </dl>
       {ed.mode === 'view' && (
         <div className="space-y-2">

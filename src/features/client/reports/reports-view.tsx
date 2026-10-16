@@ -581,7 +581,7 @@ function ReportsIndex() {
               <ClipboardList className="size-5" />
             </span>
             <p className="text-ink-900 mt-4 text-base font-semibold">Logsheet calendar</p>
-            <p className="text-ink-500 mt-1 text-sm">Open or fill a day's logsheet.</p>
+            <p className="text-ink-500 mt-1 text-sm">Open or fill a day&apos;s logsheet.</p>
           </Card>
         </Link>
       </div>
