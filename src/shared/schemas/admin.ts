@@ -10,6 +10,7 @@ import {
   mobile,
   moneyString,
   pan,
+  password,
   personName,
   reason,
   stateCode,
@@ -45,7 +46,7 @@ export const clientCreateBody = z
       .toUpperCase()
       .regex(/^[A-Z0-9-]{3,20}$/)
       .optional(),
-    firstAdmin: z.object({ name: personName, email, mobile: mobile.optional() }).strict(),
+    firstAdmin: z.object({ name: personName, email, mobile: mobile.optional(), password }).strict(),
   })
   .strict()
   .refine((b) => !b.gstin || b.gstin.slice(0, 2) === b.stateCode, {

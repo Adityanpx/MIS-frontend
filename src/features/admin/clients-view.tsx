@@ -170,6 +170,7 @@ interface FormState {
   adminName: string;
   adminEmail: string;
   adminMobile: string;
+  adminPassword: string;
 }
 const fromClient = (c?: AdminClient): FormState => ({
   code: c?.code ?? '',
@@ -191,6 +192,7 @@ const fromClient = (c?: AdminClient): FormState => ({
   adminName: '',
   adminEmail: '',
   adminMobile: '',
+  adminPassword: '',
 });
 const u = (s: string) => (s.trim() ? s.trim() : undefined);
 
@@ -227,6 +229,7 @@ function toBody(f: FormState, create: boolean) {
         name: f.adminName.trim(),
         email: f.adminEmail.trim(),
         ...(u(f.adminMobile) ? { mobile: f.adminMobile.trim() } : {}),
+        password: f.adminPassword,
       },
     };
   return {
@@ -258,7 +261,7 @@ export function ClientForm({ client, onDone }: { client?: AdminClient; onDone: (
           create
             ? adminApi.post<AdminClient>('/clients', v.data)
             : adminApi.patch<AdminClient>(`/clients/${client.id}`, v.data),
-        create ? 'Client created — the invitation e-mail is on its way' : 'Client saved',
+        create ? 'Client created — share the e-mail and password with the client admin' : 'Client saved',
       );
       if (r) onDone(r);
     } catch (err) {
@@ -341,10 +344,23 @@ export function ClientForm({ client, onDone }: { client?: AdminClient; onDone: (
       </section>
       {create && (
         <section className="grid gap-4 sm:grid-cols-2">
-          <p className="text-ink-900 text-sm font-semibold sm:col-span-2">First Client Admin (gets the invitation)</p>
+          <p className="text-ink-900 text-sm font-semibold sm:col-span-2">First Client Admin (signs in with this e-mail and password)</p>
           {txt('adminName', 'Name', { required: true, err: 'firstAdmin.name' })}
           {txt('adminEmail', 'E-mail', { required: true, type: 'email', err: 'firstAdmin.email' })}
           {txt('adminMobile', 'Mobile', { err: 'firstAdmin.mobile' })}
+          <Field
+            label="Password"
+            required
+            hint="At least 10 characters, with a letter and a number. Share it with the client admin."
+            error={e('firstAdmin.password') ?? e('password')}
+          >
+            <Input
+              value={f.adminPassword}
+              autoComplete="off"
+              onChange={(ev) => set('adminPassword', ev.target.value)}
+              invalid={!!(e('firstAdmin.password') ?? e('password'))}
+            />
+          </Field>
         </section>
       )}
       <div className="flex justify-end">
