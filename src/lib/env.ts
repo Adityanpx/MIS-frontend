@@ -6,7 +6,7 @@ export const env = {
   apiOrigin: strip(process.env.NEXT_PUBLIC_API_URL),
   appName: process.env.NEXT_PUBLIC_APP_NAME?.trim() || 'OMMIS',
   appEnv: process.env.NEXT_PUBLIC_APP_ENV?.trim() || 'local',
-  idleMinutes: Number(process.env.NEXT_PUBLIC_IDLE_MINUTES ?? 30) || 30,
+  idleMinutes: Number(process.env.NEXT_PUBLIC_IDLE_MINUTES ?? 240) || 240,
   adminIdleMinutes: Number(process.env.NEXT_PUBLIC_ADMIN_IDLE_MINUTES ?? 240) || 240,
 } as const;
 
