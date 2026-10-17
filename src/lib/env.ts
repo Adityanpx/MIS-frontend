@@ -7,6 +7,7 @@ export const env = {
   appName: process.env.NEXT_PUBLIC_APP_NAME?.trim() || 'OMMIS',
   appEnv: process.env.NEXT_PUBLIC_APP_ENV?.trim() || 'local',
   idleMinutes: Number(process.env.NEXT_PUBLIC_IDLE_MINUTES ?? 30) || 30,
+  adminIdleMinutes: Number(process.env.NEXT_PUBLIC_ADMIN_IDLE_MINUTES ?? 240) || 240,
 } as const;
 
 export const CLIENT_API_BASE = `${env.apiOrigin}/api/v1`;

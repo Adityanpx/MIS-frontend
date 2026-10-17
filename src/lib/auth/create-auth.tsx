@@ -222,10 +222,12 @@ export function createAuth<P>(cfg: AuthConfig<P>) {
       };
       const evs = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'mousemove'] as const;
       evs.forEach((e) => window.addEventListener(e, bump, { passive: true }));
+      const idleMinutes = cfg.area === 'admin' ? env.adminIdleMinutes : env.idleMinutes;
       const t = setInterval(() => {
-        if (Date.now() - last > env.idleMinutes * 60_000) {
+        if (Date.now() - last > idleMinutes * 60_000) {
           void logoutRef.current('idle');
-          toast.message(`Signed out after ${env.idleMinutes} minutes without activity.`);
+          const span = idleMinutes >= 60 ? `${idleMinutes / 60} hours` : `${idleMinutes} minutes`;
+          toast.message(`Signed out after ${span} without activity.`);
         }
       }, 30_000);
       return () => {
