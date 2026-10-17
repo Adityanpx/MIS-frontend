@@ -12,9 +12,5 @@ export const changePasswordBody = z
   .strict();
 export const codeBody = z.object({ code: z.string().regex(/^\d{6}$/) }).strict();
 export const mePatchBody = z
-  .object({
-    name: personName.optional(),
-    mobile: mobile.optional(),
-    designation: z.string().trim().max(100).optional(),
-  })
+  .object({ name: personName.optional(), mobile: mobile.optional(), designation: z.string().trim().max(100).optional() })
   .strict();

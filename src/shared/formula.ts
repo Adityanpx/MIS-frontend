@@ -72,31 +72,19 @@ export function parseFormula(src: string): FormulaNode {
 
 export function formulaRefs(node: FormulaNode, out = new Set<string>()): Set<string> {
   switch (node.t) {
-    case 'ref':
-      out.add(node.code);
-      break;
-    case 'neg':
-      formulaRefs(node.e, out);
-      break;
-    case 'bin':
-      formulaRefs(node.a, out);
-      formulaRefs(node.b, out);
-      break;
-    case 'fn':
-      node.args.forEach((a) => formulaRefs(a, out));
-      break;
-    default:
-      break;
+    case 'ref': out.add(node.code); break;
+    case 'neg': formulaRefs(node.e, out); break;
+    case 'bin': formulaRefs(node.a, out); formulaRefs(node.b, out); break;
+    case 'fn': node.args.forEach((a) => formulaRefs(a, out)); break;
+    default: break;
   }
   return out;
 }
 
 export function evalFormula(node: FormulaNode, lookup: (code: string) => number | null): number | null {
   switch (node.t) {
-    case 'num':
-      return node.v;
-    case 'ref':
-      return lookup(node.code);
+    case 'num': return node.v;
+    case 'ref': return lookup(node.code);
     case 'neg': {
       const v = evalFormula(node.e, lookup);
       return v === null ? null : -v;
@@ -120,8 +108,7 @@ export function evalFormula(node: FormulaNode, lookup: (code: string) => number 
       const f = 10 ** n[1]!;
       return Math.round(n[0]! * f) / f;
     }
-    default:
-      return null;
+    default: return null;
   }
 }
 

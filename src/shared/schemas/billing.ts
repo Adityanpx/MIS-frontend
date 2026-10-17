@@ -25,11 +25,7 @@ export const offlinePaymentBody = z
   .strict()
   .superRefine((b, ctx) => {
     if (b.mode !== 'cash' && !b.reference) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['reference'],
-        message: 'Reference (UTR / cheque no. / UPI ref) is required',
-      });
+      ctx.addIssue({ code: 'custom', path: ['reference'], message: 'Reference (UTR / cheque no. / UPI ref) is required' });
     }
     if (b.mode === 'cheque' && (!b.bank || !b.chequeDate)) {
       ctx.addIssue({ code: 'custom', path: ['bank'], message: 'Bank and cheque date are required for a cheque' });
@@ -46,20 +42,12 @@ export const manualInvoiceBody = z
     clientId: uuid,
     plantId: uuid.optional(),
     lines: z
-      .array(
-        z
-          .object({
-            description: z.string().trim().min(3).max(300),
-            sac: z
-              .string()
-              .trim()
-              .regex(/^\d{4,8}$/)
-              .optional(),
-            qty: z.coerce.number().positive().max(100000).default(1),
-            rate: money,
-          })
-          .strict(),
-      )
+      .array(z.object({
+        description: z.string().trim().min(3).max(300),
+        sac: z.string().trim().regex(/^\d{4,8}$/).optional(),
+        qty: z.coerce.number().positive().max(100000).default(1),
+        rate: money,
+      }).strict())
       .min(1)
       .max(20),
     dueDate: isoDate.optional(),
@@ -86,33 +74,16 @@ export const tdsPatchBody = z
   })
   .strict();
 /** Multipart text fields (CA-13). */
-export const clientTdsFields = z.object({
-  amount: money,
-  section: z.string().trim().min(2).max(20),
-  deductionDate: isoDate,
-});
+export const clientTdsFields = z.object({ amount: money, section: z.string().trim().min(2).max(20), deductionDate: isoDate });
 /** Multipart text fields (CA-12). */
-export const paymentNotificationFields = z.object({
-  amount: money,
-  paidOn: isoDate,
-  reference: z.string().trim().min(3).max(100),
-});
+export const paymentNotificationFields = z.object({ amount: money, paidOn: isoDate, reference: z.string().trim().min(3).max(100) });
 export const verifyNotificationBody = z
-  .object({
-    mode: z.enum(['neft', 'rtgs', 'imps', 'upi', 'other']).default('neft'),
-    allocations: z.array(allocationInput).max(50).optional(),
-  })
+  .object({ mode: z.enum(['neft', 'rtgs', 'imps', 'upi', 'other']).default('neft'), allocations: z.array(allocationInput).max(50).optional() })
   .strict();
 export const rejectNotificationBody = z.object({ note: z.string().trim().min(3).max(500) }).strict();
 
 export const refundBody = z
-  .object({
-    amount: money,
-    refundDate: isoDate,
-    mode: z.enum(OFFLINE_PAYMENT_MODES),
-    reference: z.string().trim().max(100).optional(),
-    reason,
-  })
+  .object({ amount: money, refundDate: isoDate, mode: z.enum(OFFLINE_PAYMENT_MODES), reference: z.string().trim().max(100).optional(), reason })
   .strict();
 export const applyCreditBody = z.object({ invoiceId: uuid, amount: money.optional() }).strict();
 
@@ -129,36 +100,20 @@ export const renewBody = z
     customReason: reason.optional(),
   })
   .strict()
-  .refine((b) => !b.customPricePerYear || !!b.customReason, {
-    message: 'A reason is required for a custom price',
-    path: ['customReason'],
-  });
+  .refine((b) => !b.customPricePerYear || !!b.customReason, { message: 'A reason is required for a custom price', path: ['customReason'] });
 export const extendSubscriptionBody = z
-  .object({
-    addYears: z.coerce
-      .number()
-      .int()
-      .min(1)
-      .max(MAX_CONTRACT_YEARS - 1),
-    pricePerYear: money.optional(),
-    reason,
-  })
+  .object({ addYears: z.coerce.number().int().min(1).max(MAX_CONTRACT_YEARS - 1), pricePerYear: money.optional(), reason })
   .strict();
 export const changePlanBody = z.object({ planId: uuid, reason }).strict();
 export const cancelSubscriptionBody = z
-  .object({
-    reason,
-    effectiveDate: isoDate.optional(),
-    unpaidInvoices: z.enum(['keep', 'credit_note']).default('keep'),
-  })
+  .object({ reason, effectiveDate: isoDate.optional(), unpaidInvoices: z.enum(['keep', 'credit_note']).default('keep') })
   .strict();
 
 export const actAsBody = z
   .object({ mode: z.enum(['view', 'edit']), reason: z.string().trim().max(1000).optional() })
   .strict()
   .refine((b) => b.mode === 'view' || (b.reason?.length ?? 0) >= 10, {
-    path: ['reason'],
-    message: 'A reason (at least 10 characters) is required for an edit session',
+    path: ['reason'], message: 'A reason (at least 10 characters) is required for an edit session',
   });
 
 export const announcementBody = z
@@ -171,10 +126,7 @@ export const announcementBody = z
     sendEmail: z.boolean().default(false),
   })
   .strict()
-  .refine((b) => Date.parse(b.endsAt) > Date.parse(b.startsAt), {
-    path: ['endsAt'],
-    message: 'End must be after start',
-  });
+  .refine((b) => Date.parse(b.endsAt) > Date.parse(b.startsAt), { path: ['endsAt'], message: 'End must be after start' });
 export const announcementPatchBody = z
   .object({
     message: z.string().trim().min(3).max(500).optional(),

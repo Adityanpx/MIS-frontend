@@ -15,7 +15,7 @@ import { fmtDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { blockIcon } from '../logsheet/blocks';
 import { ParameterDrawer } from './parameter-drawer';
-import { currentOf, SectionHeader, SectionSkeleton, standardText } from './parts';
+import { SectionHeader, SectionSkeleton, standardsTodayText } from './parts';
 import { useSettings } from './queries';
 import { BLOCK_LABEL, GROUP_LABEL, type ParameterDto, type ParamGroup } from './types';
 
@@ -104,7 +104,7 @@ export function ParametersSection() {
       header: 'Standard today',
       width: '210px',
       hideBelow: 'md',
-      cell: (p) => <span className="tabular text-ink-700">{standardText(p, currentOf(p.standards))}</span>,
+      cell: (p) => <span className="tabular text-ink-700">{standardsTodayText(p)}</span>,
     },
     {
       key: 'flags',

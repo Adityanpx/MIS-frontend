@@ -1,29 +1,11 @@
 import { z } from 'zod';
 import { BILLING_MODES, PLANT_TYPES } from '../enums';
 import { MAX_TENURE_MONTHS, MAX_CONTRACT_YEARS } from '../constants';
-import {
-  address,
-  contact,
-  email,
-  gstin,
-  isoDate,
-  mobile,
-  moneyString,
-  pan,
-  password,
-  personName,
-  reason,
-  stateCode,
-  uuid,
-} from './common';
+import { address, contact, email, gstin, isoDate, mobile, moneyString, pan, password, personName, reason, stateCode, uuid } from './common';
 
 export const superAdminCreateBody = z.object({ name: personName, email, mobile: mobile.optional() }).strict();
-export const superAdminPatchBody = z
-  .object({ name: personName.optional(), mobile: mobile.nullable().optional() })
-  .strict();
-export const adminMePatchBody = z
-  .object({ name: personName.optional(), mobile: mobile.nullable().optional() })
-  .strict();
+export const superAdminPatchBody = z.object({ name: personName.optional(), mobile: mobile.nullable().optional() }).strict();
+export const adminMePatchBody = z.object({ name: personName.optional(), mobile: mobile.nullable().optional() }).strict();
 
 const clientBase = {
   displayName: z.string().trim().min(2).max(150),
@@ -40,18 +22,12 @@ const clientBase = {
 export const clientCreateBody = z
   .object({
     ...clientBase,
-    code: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .regex(/^[A-Z0-9-]{3,20}$/)
-      .optional(),
+    code: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{3,20}$/).optional(),
     firstAdmin: z.object({ name: personName, email, mobile: mobile.optional(), password }).strict(),
   })
   .strict()
   .refine((b) => !b.gstin || b.gstin.slice(0, 2) === b.stateCode, {
-    message: 'GSTIN state code must match the selected state',
-    path: ['gstin'],
+    message: 'GSTIN state code must match the selected state', path: ['gstin'],
   });
 export const clientPatchBody = z
   .object({
@@ -71,10 +47,7 @@ export const clientListQuery = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   q: z.string().trim().max(100).optional(),
-  sort: z
-    .string()
-    .regex(/^-?[a-zA-Z]+$/)
-    .optional(),
+  sort: z.string().regex(/^-?[a-zA-Z]+$/).optional(),
   stateCode: stateCode.optional(),
   accountState: z.enum(['active', 'grace', 'read_only', 'suspended', 'terminated']).optional(),
 });
@@ -83,17 +56,14 @@ const pct = (max: number) => z.coerce.number().min(0).max(max);
 export const planCreateBody = z
   .object({
     name: z.string().trim().min(2).max(100),
-    code: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .regex(/^[A-Z0-9-]{2,30}$/),
+    code: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{2,30}$/),
     description: z.string().trim().max(1000).optional(),
     termYears: z.coerce.number().int().min(1).max(MAX_CONTRACT_YEARS),
     pricePerYear: moneyString,
     escalationPct: pct(25).default(0),
     upfrontDiscountPct: pct(50).default(0),
     maxUsersPerPlant: z.coerce.number().int().min(1).max(1000).default(10),
+    maxManagementUsers: z.coerce.number().int().min(0).max(100).default(5),
     storageGb: z.coerce.number().int().min(1).max(1000).default(5),
     features: z.record(z.boolean()).default({}),
   })
@@ -120,20 +90,14 @@ export const subscriptionInput = z
   })
   .strict()
   .refine((s) => !s.customPricePerYear || !!s.customReason, {
-    message: 'A reason is required for a custom price',
-    path: ['customReason'],
+    message: 'A reason is required for a custom price', path: ['customReason'],
   });
 
 export const plantCreateBody = z
   .object({
     clientId: uuid,
     name: z.string().trim().min(2).max(150),
-    code: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .regex(/^[A-Z0-9-]{2,20}$/)
-      .optional(),
+    code: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{2,20}$/).optional(),
     type: z.enum(PLANT_TYPES),
     capacityMld: z.coerce.number().positive().max(10000),
     city: z.string().trim().max(100).optional(),

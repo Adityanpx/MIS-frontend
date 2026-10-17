@@ -13,7 +13,7 @@ import { todayIST } from '@/lib/dates';
 import { DASH, fmtAuto, fmtDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { usePlant } from '../plant-context';
-import type { ParameterDto, StandardRow } from './types';
+import { STANDARD_KIND_LABEL, type ParameterDto, type StandardKind, type StandardRow, type StandardsByKind } from './types';
 
 /** Settings writes are Client Admin only, and never while the account is read-only. */
 export function useCanEditSettings() {
@@ -217,6 +217,23 @@ export const numOrNull = (s: string): number | null => (s.trim() === '' ? null :
 export const str = (v: number | string | null | undefined) => (v === null || v === undefined ? '' : String(v));
 
 /** "120 / day" · "6 – 8.5" · "≤ 10" · "8 / day · 32 / month" */
+/** Standards per kind; tolerates a missing value or the older flat list (treated as "actual"). */
+export function standardsByKind(p: Pick<ParameterDto, 'standards'>): StandardsByKind {
+  const s = p.standards as unknown;
+  if (Array.isArray(s)) return { bidding: [], actual: s as StandardRow[] };
+  const o = (s ?? {}) as Partial<StandardsByKind>;
+  return { bidding: o.bidding ?? [], actual: o.actual ?? [] };
+}
+
+/** "Standard today" for a list cell: one value, or "Bidding … / Actual …" when both kinds are set. */
+export function standardsTodayText(p: Pick<ParameterDto, 'stdType' | 'unit' | 'standards'>): string {
+  const by = standardsByKind(p);
+  const kinds = (['bidding', 'actual'] as StandardKind[]).filter((k) => by[k].length > 0);
+  if (kinds.length === 0) return DASH;
+  if (kinds.length === 1) return standardText(p, currentOf(by[kinds[0]]));
+  return kinds.map((k) => `${STANDARD_KIND_LABEL[k]}: ${standardText(p, currentOf(by[k]))}`).join(' | ');
+}
+
 export function standardText(p: Pick<ParameterDto, 'stdType' | 'unit'>, s: StandardRow | undefined): string {
   if (!s) return DASH;
   const parts: string[] = [];

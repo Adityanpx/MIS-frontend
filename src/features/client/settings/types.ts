@@ -31,8 +31,12 @@ export interface StandardRow {
   monthly: number | null;
   min: number | null;
   max: number | null;
+  inheritFromKind?: StandardKind | null;
   reason: string | null;
 }
+export type StandardKind = 'bidding' | 'actual';
+export type StandardsByKind = Record<StandardKind, StandardRow[]>;
+export const STANDARD_KIND_LABEL: Record<StandardKind, string> = { bidding: 'Bidding', actual: 'Actual' };
 
 export type ParamGroup = 'key' | 'chemical' | 'lab_inlet' | 'lab_outlet' | 'safety' | 'staff' | 'cash' | 'other';
 export interface ParameterDto {
@@ -67,7 +71,7 @@ export interface ParameterDto {
   mandatory: boolean;
   activeFrom: string | null;
   activeTo: string | null;
-  standards: StandardRow[];
+  standards: StandardsByKind;
 }
 
 export interface ConstantRow {

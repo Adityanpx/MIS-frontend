@@ -29,13 +29,21 @@ import {
   numOrNull,
   numOrUndef,
   str,
+  standardsByKind,
   standardText,
   ToggleRow,
   useCanEditSettings,
   type EffectiveValue,
 } from './parts';
 import { apiErrors, checkBody, useSettings } from './queries';
-import { BLOCK_LABEL, GROUP_LABEL, LINK_ROLE_LABEL, type ParameterDto } from './types';
+import {
+  BLOCK_LABEL,
+  GROUP_LABEL,
+  LINK_ROLE_LABEL,
+  STANDARD_KIND_LABEL,
+  type ParameterDto,
+  type StandardKind,
+} from './types';
 
 const opt = (o: Record<string, string>) => Object.entries(o).map(([value, label]) => ({ value, label }));
 const AGG = {
@@ -240,6 +248,7 @@ export function ParameterDrawer({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [std, setStd] = useState({ std: '', monthly: '', min: '', max: '' });
+  const [stdKind, setStdKind] = useState<StandardKind>('actual');
   const [stdEff, setStdEff] = useState<EffectiveValue>(EFFECTIVE_TODAY);
   const [stdErrors, setStdErrors] = useState<Record<string, string>>({});
   const [deact, setDeact] = useState(false);
@@ -307,6 +316,7 @@ export function ParameterDrawer({
   async function addStandard() {
     if (!param) return;
     const c = checkBody(standardCreateBody, {
+      kind: stdKind,
       std: numOrNull(std.std),
       monthly: numOrNull(std.monthly),
       min: numOrNull(std.min),
@@ -560,16 +570,36 @@ export function ParameterDrawer({
     </div>
   );
 
-  const standards = param && (
+  const byKind = param ? standardsByKind(param) : null;
+  const standardsCount = byKind ? byKind.bidding.length + byKind.actual.length : 0;
+  const standards = param && byKind && (
     <div className="space-y-6">
-      {param.standards.length ? (
-        <HistoryList rows={param.standards} render={(r) => standardText(param, r)} />
+      {standardsCount ? (
+        (['bidding', 'actual'] as const).map(
+          (k) =>
+            byKind[k].length > 0 && (
+              <div key={k} className="space-y-3">
+                <p className="text-ink-900 text-sm font-semibold">{STANDARD_KIND_LABEL[k]} standard</p>
+                <HistoryList rows={byKind[k]} render={(r) => standardText(param, r)} />
+              </div>
+            ),
+        )
       ) : (
         <p className="text-ink-500 text-sm">No standard yet.</p>
       )}
       {editable && (
         <div className="rounded-inner border-line space-y-4 border p-4">
           <p className="text-ink-900 text-sm font-semibold">Set a new standard</p>
+          <Field label="Standard kind">
+            <Select
+              value={stdKind}
+              onValueChange={(v) => setStdKind(v as StandardKind)}
+              options={[
+                { value: 'actual', label: STANDARD_KIND_LABEL.actual },
+                { value: 'bidding', label: STANDARD_KIND_LABEL.bidding },
+              ]}
+            />
+          </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             {(
               [
@@ -648,7 +678,7 @@ export function ParameterDrawer({
             onChange={setTab}
             items={[
               { value: 'details', label: 'Details' },
-              { value: 'standards', label: 'Standards', count: param.standards.length },
+              { value: 'standards', label: 'Standards', count: standardsCount },
             ]}
           />
         )}
