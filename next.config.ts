@@ -35,6 +35,8 @@ const nextConfig: NextConfig = {
     if (!PROXY_TARGET) return [];
     return [
       { source: '/api/:path*', destination: `${PROXY_TARGET}/api/:path*` },
+      // wake-up ping from the login page (a sleeping host starts booting before the user clicks Sign in)
+      { source: '/health', destination: `${PROXY_TARGET}/health` },
       // signed local-storage files (STORAGE_DRIVER=local on the API) when PUBLIC_API_URL points at this site
       { source: '/files/:path*', destination: `${PROXY_TARGET}/files/:path*` },
     ];

@@ -76,7 +76,8 @@ export interface ApiClient {
 }
 
 const TRANSIENT_STATUSES = new Set([502, 503, 504]);
-const RETRY_BACKOFF = [600, 1500, 3000, 5000];
+// ~70 s in total: long enough to ride out a cold start of a sleeping host (Render free tier takes 30–60 s).
+const RETRY_BACKOFF = [600, 1500, 3000, 5000, ...Array<number>(12).fill(5000)];
 const sleepMs = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export function createApiClient(cfg: { name: 'client' | 'admin'; baseUrl: string; refreshPath: string }): ApiClient {
