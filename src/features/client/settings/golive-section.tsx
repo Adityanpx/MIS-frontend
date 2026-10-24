@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, CheckCircle2, ClipboardList, FileSpreadsheet, Rocket, XCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Modal } from '@/components/ui/dialog';
@@ -32,8 +32,35 @@ export const CHECK_SECTION: Record<string, { section: string; label: string }> =
   safety: { section: 'safety', label: 'Safety requirements' },
 };
 
+/** A checklist row: a page link on the settings page, a step jump inside the guided-setup popup. */
+function ItemLink({
+  section,
+  href,
+  onJump,
+  className,
+  children,
+}: {
+  section: string;
+  href: string;
+  onJump?: (section: string) => void;
+  className: string;
+  children: ReactNode;
+}) {
+  if (onJump)
+    return (
+      <button type="button" className={className} onClick={() => onJump(section)}>
+        {children}
+      </button>
+    );
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  );
+}
+
 /** §11.12 Go-live checklist (SET-10): every item green → Client Admin takes the plant live. */
-export function GoLiveSection() {
+export function GoLiveSection({ onJump }: { onJump?: (section: string) => void } = {}) {
   const { plant } = usePlant();
   const q = useSettings('go-live-check');
   const canEdit = useCanEditSettings();
@@ -140,10 +167,12 @@ export function GoLiveSection() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: n * 0.04 }}
                   >
-                    <Link
+                    <ItemLink
+                      section={CHECK_SECTION[i.key]?.section ?? 'general'}
                       href={`${base}/settings/${CHECK_SECTION[i.key]?.section ?? 'general'}`}
+                      onJump={onJump}
                       className={cn(
-                        'group flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors',
+                        'group flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors',
                         i.ok ? 'border-line hover:bg-canvas' : 'border-danger-100 bg-danger-50/50 hover:bg-danger-50',
                       )}
                     >
@@ -157,7 +186,7 @@ export function GoLiveSection() {
                         {!i.ok && <p className="text-danger-600 text-xs">{i.message}</p>}
                       </div>
                       <ArrowRight className="text-ink-300 group-hover:text-ink-700 size-4 transition-colors" />
-                    </Link>
+                    </ItemLink>
                   </motion.li>
                 ),
               )}

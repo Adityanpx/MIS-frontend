@@ -18,7 +18,7 @@ import {
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { PageFade } from '@/components/motion/primitives';
 import { PageHeader } from '@/components/shell/page-header';
 import { StatusBadge } from '@/components/ui/badge';
@@ -36,6 +36,7 @@ import { ParametersSection } from './parameters-section';
 import { PeopleSection } from './people-section';
 import { useSettings } from './queries';
 import { RegistersSection } from './registers-section';
+import { SetupWorkspace } from './setup-workspace';
 import { StockSection } from './stock-section';
 import { TemplateSection } from './template-section';
 
@@ -112,6 +113,21 @@ export function SettingsView() {
   const params = useParams<{ section?: string[] }>();
   const pending = plant.setupStatus === 'settings_pending';
   const check = useSettings('go-live-check', can('settings.view'));
+  const [guided, setGuided] = useState(false);
+  const canGuide = pending && can('settings.edit');
+
+  // A plant that is not live yet opens the guided setup once per browser session.
+  useEffect(() => {
+    if (!canGuide) return;
+    try {
+      const k = `ommis.setup.${plant.id}`;
+      if (sessionStorage.getItem(k)) return;
+      sessionStorage.setItem(k, '1');
+    } catch {
+      /* storage blocked: still open it */
+    }
+    setGuided(true);
+  }, [canGuide, plant.id]);
   const visible = SECTIONS.filter((s) => !s.caOnly || plant.myRole === 'client_admin');
   const id = params.section?.[0] ?? (pending ? 'go-live' : 'general');
   if ((params.section?.length ?? 0) > 1) notFound();
@@ -146,7 +162,7 @@ export function SettingsView() {
         subtitle={`${plant.name} · ${plant.code}`}
         badge={<StatusBadge status={plant.setupStatus} />}
       />
-      {pending && id !== 'go-live' && items.length > 0 && (
+      {pending && items.length > 0 && (
         <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="bg-premium relative mb-6 overflow-hidden text-white">
             <div className="dot-grid absolute inset-0 opacity-20" />
@@ -167,8 +183,8 @@ export function SettingsView() {
                   height={6}
                 />
               </div>
-              <Button variant="white" asChild>
-                <Link href={href('go-live')}>View checklist</Link>
+              <Button variant="white" onClick={() => setGuided(true)}>
+                Continue guided setup
               </Button>
             </div>
           </Card>
@@ -239,6 +255,7 @@ export function SettingsView() {
           {current.render()}
         </PageFade>
       </div>
+      <SetupWorkspace open={guided} onClose={() => setGuided(false)} />
     </>
   );
 }
