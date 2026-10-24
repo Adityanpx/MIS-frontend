@@ -3,7 +3,6 @@
 import { ChevronDown, Copy, IndianRupee, Percent, PencilLine, Plus, Trash2, TrendingUp } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
-import { BarChart } from '@/components/charts/bar-chart';
 import { Collapse } from '@/components/motion/primitives';
 import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
@@ -16,7 +15,7 @@ import { Select } from '@/components/ui/select';
 import { Segmented } from '@/components/ui/tabs';
 import { clientApi } from '@/lib/api';
 import { todayIST } from '@/lib/dates';
-import { fmtCompact, fmtDate, fmtMoney, fmtNum } from '@/lib/format';
+import { fmtDate, fmtMoney, fmtNum } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import {
   applyEscalationBody,
@@ -85,7 +84,6 @@ export function ContractSection() {
   const data = q.data;
   const current = data.years.find((y) => y.startDate <= today && y.endDate >= today)?.yearNo ?? null;
   const active = openYear ?? current ?? data.years[0]?.yearNo ?? null;
-  const cur = data.years.find((y) => y.yearNo === current);
 
   async function run(r: Req, done: () => void) {
     try {
@@ -159,56 +157,9 @@ export function ContractSection() {
           </Button>
         }
       />
-      <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
-        <Card className="bg-premium relative overflow-hidden text-white">
-          <div className="dot-grid absolute inset-0 opacity-20" />
-          <div className="relative">
-            <p className="text-sm font-medium text-white/70">Total contract value</p>
-            <p className="mt-2 text-[34px] leading-none font-semibold tracking-tight">
-              {fmtCompact(Number(data.totalContractValue), { money: true, decimals: 2 })}
-            </p>
-            <p className="mt-2 text-xs text-white/60">{fmtMoney(data.totalContractValue)}</p>
-            <div className="mt-6 grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-[11px] tracking-wider text-white/60 uppercase">Years</p>
-                <p className="text-lg font-semibold">{data.years.length}</p>
-              </div>
-              <div>
-                <p className="text-[11px] tracking-wider text-white/60 uppercase">Current year</p>
-                <p className="text-lg font-semibold">{current ? `Year ${current}` : '—'}</p>
-              </div>
-              {cur && (
-                <>
-                  <div>
-                    <p className="text-[11px] tracking-wider text-white/60 uppercase">Fixed fee / month</p>
-                    <p className="text-lg font-semibold">
-                      {fmtCompact(Number(cur.derived.fixedPerMonth), { money: true, decimals: 2 })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] tracking-wider text-white/60 uppercase">Variable std / month</p>
-                    <p className="text-lg font-semibold">
-                      {fmtCompact(Number(cur.derived.variableStdPerMonth), { money: true, decimals: 2 })}
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <p className="text-ink-900 mb-1 text-base font-semibold">Contract value by year</p>
-          <p className="text-ink-500 mb-3 text-xs">Fixed fee + variable components at standard quantities</p>
-          <BarChart
-            height={190}
-            highlight={current ? data.years.findIndex((y) => y.yearNo === current) : 'last'}
-            seriesLabel="Contract value"
-            format={(v) => fmtCompact(v, { money: true })}
-            showYAxis={false}
-            data={data.years.map((y) => ({ label: `Y${y.yearNo}`, value: Number(y.derived.contractValue) }))}
-          />
-        </Card>
-      </div>
+      <p className="text-ink-700 text-sm">
+        Total contract value: <span className="text-ink-900 font-semibold">{fmtMoney(data.totalContractValue)}</span>
+      </p>
 
       <div className="space-y-3">
         {data.years.map((y) => {

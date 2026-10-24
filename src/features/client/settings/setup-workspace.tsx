@@ -3,151 +3,82 @@
 import * as D from '@radix-ui/react-dialog';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft,
-  ArrowRight,
   Banknote,
   Check,
+  CheckCircle2,
   FlaskConical,
   IndianRupee,
+  Loader2,
   Rocket,
-  Settings2,
   Sigma,
   SlidersHorizontal,
   Sparkles,
+  TriangleAlert,
   Users,
   X,
   type LucideIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { EASE_OUT } from '@/components/motion/primitives';
 import { Button } from '@/components/ui/button';
-import { ProgressBar } from '@/components/ui/misc';
+import { Modal } from '@/components/ui/dialog';
 import { clientApi } from '@/lib/api';
+import { useClientAuth } from '@/lib/auth/client-auth';
+import { qk } from '@/lib/query/keys';
 import { cn } from '@/lib/utils';
 import { usePlant } from '../plant-context';
-import { CashSection } from './cash-section';
-import { ConstantsSection } from './constants-section';
-import { ContractSection } from './contract-section';
-import { GeneralSection } from './general-section';
-import { GoLiveSection } from './golive-section';
-import { ParametersSection } from './parameters-section';
-import { PeopleSection } from './people-section';
-import { PanelCard, useCanEditSettings } from './parts';
+import { CHECK_SECTION } from './golive-section';
+import { useCanEditSettings } from './parts';
 import { apiErrors, useSettings } from './queries';
-import { StockSection } from './stock-section';
+import { SheetProvider } from './sheet/cells';
+import { CashTab } from './sheet/cash-tab';
+import { ConstantsTab } from './sheet/constants-tab';
+import { ContractTab } from './sheet/contract-tab';
+import { ParametersTab } from './sheet/parameters-tab';
+import { PeopleTab } from './sheet/people-tab';
+import { StockTab } from './sheet/stock-tab';
 import type { ParameterDto } from './types';
 
-interface Step {
+interface Tab {
   id: string;
   label: string;
   icon: LucideIcon;
-  /** one plain-language sentence: what this step is and why it is needed */
-  intro: string;
-  /** go-live checks this step satisfies (none = nothing is required here) */
+  /** go-live checks that live on this tab */
   checks: string[];
-  /** the settings sections this step covers (the go-live checklist jumps by section) */
-  sections: string[];
-  optional?: boolean;
   caOnly?: boolean;
 }
-
-const STEPS: Step[] = [
-  {
-    id: 'start',
-    label: 'Quick start',
-    icon: Sparkles,
-    intro:
-      'Fill the plant with the standard set-up in one click, then check each step. Or start empty and add everything yourself.',
-    checks: ['parameters'],
-    sections: ['template'],
-  },
-  {
-    id: 'general',
-    label: 'Plant basics',
-    icon: Settings2,
-    intro: 'The names that appear on your reports and logsheets, and the date your MIS starts from.',
-    checks: [],
-    sections: ['general'],
-  },
+const TABS: Tab[] = [
   {
     id: 'parameters',
-    label: 'Parameters & limits',
+    label: 'Parameters',
     icon: SlidersHorizontal,
-    intro:
-      'Everything you record every day (flow, power, lab results), its unit, and the limit each value is checked against.',
-    checks: ['units', 'standards', 'lab_limits'],
-    sections: ['parameters'],
+    checks: ['parameters', 'units', 'standards', 'lab_limits'],
   },
-  {
-    id: 'constants',
-    label: 'Constants',
-    icon: Sigma,
-    intro: 'Fixed numbers the reports use in their calculations, such as design capacity or tariffs.',
-    checks: [],
-    sections: ['constants'],
-  },
-  {
-    id: 'stock',
-    label: 'Chemicals & stock',
-    icon: FlaskConical,
-    intro: 'The chemicals you keep on site and how much of each you have today. This is your opening balance.',
-    checks: ['stock_opening'],
-    sections: ['stock'],
-  },
-  {
-    id: 'people',
-    label: 'Staff & safety',
-    icon: Users,
-    intro: 'How many people you need on site by category, and the safety items that must be in place.',
-    checks: ['staff', 'safety'],
-    sections: ['staff', 'safety'],
-  },
-  {
-    id: 'cash',
-    label: 'Site cash',
-    icon: Banknote,
-    intro: 'The petty cash held on site today, and the amount at which you want to be warned.',
-    checks: ['cash_opening'],
-    sections: ['cash'],
-  },
-  {
-    id: 'contract',
-    label: 'Contract & revenue',
-    icon: IndianRupee,
-    intro: 'The fees from your contract, so revenue can be worked out correctly.',
-    checks: ['contract_fees'],
-    sections: ['contract'],
-    caOnly: true,
-  },
-  {
-    id: 'review',
-    label: 'Review & go live',
-    icon: Rocket,
-    intro: 'Check that nothing is missing. Select any red item to fix it, then take the plant live.',
-    checks: [],
-    sections: [],
-  },
+  { id: 'constants', label: 'Constants', icon: Sigma, checks: [] },
+  { id: 'stock', label: 'Chemicals & stock', icon: FlaskConical, checks: ['stock_opening'] },
+  { id: 'people', label: 'Staff & safety', icon: Users, checks: ['staff', 'safety'] },
+  { id: 'cash', label: 'Site cash', icon: Banknote, checks: ['cash_opening'] },
+  { id: 'contract', label: 'Contract fees', icon: IndianRupee, checks: ['contract_fees'], caOnly: true },
 ];
+const tabOfCheck = (key: string) => TABS.find((t) => t.checks.includes(key))?.id;
 
-/** Applies the standard set-up to a plant that has no parameters yet (same call as Templates & import). */
-function QuickStart({ onNext }: { onNext: () => void }) {
+/** Shown while the plant has no parameters at all: fill everything with the standard set-up, or start empty. */
+function QuickStart({ onEmpty }: { onEmpty: () => void }) {
   const { plant } = usePlant();
   const canEdit = useCanEditSettings();
   const qc = useQueryClient();
-  const paramCount = useSettings('parameters').data?.length ?? 0;
   const [busy, setBusy] = useState(false);
 
   async function apply() {
     setBusy(true);
     try {
       await clientApi.post<ParameterDto[]>(`/plants/${plant.id}/settings/apply-template`);
-      await qc.invalidateQueries({ queryKey: ['c', 'plant', plant.id] });
-      toast.success('Standard set-up applied', {
-        description: 'Now check each step. Change anything that is different for your plant.',
+      await qc.invalidateQueries({ queryKey: qk.client.plant(plant.id) });
+      toast.success('Standard set-up added', {
+        description: 'Check each tab and change what is different for your plant.',
       });
-      onNext();
     } catch (e) {
       apiErrors(e);
     } finally {
@@ -155,93 +86,93 @@ function QuickStart({ onNext }: { onNext: () => void }) {
     }
   }
 
-  const filled = paramCount > 0;
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-      <PanelCard className="text-center">
-        <span className="bg-brand-50 text-brand-500 mx-auto grid size-16 place-items-center rounded-3xl">
-          <Sparkles className="size-7" />
-        </span>
-        <h3 className="text-ink-900 mt-5 text-xl font-semibold">
-          {filled ? 'The standard set-up is already in place' : 'Start with the standard set-up'}
-        </h3>
-        <p className="text-ink-500 mx-auto mt-2 max-w-lg text-sm">
-          {filled
-            ? `${paramCount} parameters are ready. Go through the next steps and change anything that is different for your plant.`
-            : 'One click adds the usual parameters, limits, constants, chemicals, staff and safety items. You then review each step and edit what you need. Nothing is final until you go live.'}
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          {!filled && (
-            <Button size="lg" onClick={apply} loading={busy} disabled={!canEdit}>
-              <Sparkles /> Fill with defaults
-            </Button>
-          )}
-          <Button size="lg" variant={filled ? 'primary' : 'secondary'} onClick={onNext}>
-            {filled ? 'Review the steps' : 'Start empty instead'} <ArrowRight />
-          </Button>
-        </div>
-        {!filled && !canEdit && (
-          <p className="text-ink-400 mt-4 text-xs">Only a Client Admin can fill in the defaults.</p>
-        )}
-      </PanelCard>
+    <div className="mx-auto max-w-xl py-10 text-center">
+      <span className="bg-brand-50 text-brand-500 mx-auto grid size-16 place-items-center rounded-3xl">
+        <Sparkles className="size-7" />
+      </span>
+      <h3 className="text-ink-900 mt-5 text-xl font-semibold">Start with the standard set-up</h3>
+      <p className="text-ink-500 mt-2 text-sm">
+        One click fills every tab with the usual parameters, limits, constants, chemicals, staff and safety items. You
+        then check the sheets and change anything that is different for your plant.
+      </p>
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <Button size="lg" onClick={apply} loading={busy} disabled={!canEdit}>
+          <Sparkles /> Fill with defaults
+        </Button>
+        <Button size="lg" variant="secondary" onClick={onEmpty}>
+          Start empty
+        </Button>
+      </div>
+      {!canEdit && <p className="text-ink-400 mt-4 text-xs">Only a Client Admin can fill in the defaults.</p>}
     </div>
   );
 }
 
 /**
- * Guided plant setup in one large popup: a step list on the left, the full editable section in the middle,
- * Back / Continue underneath. Reuses the existing settings sections, so every save and check is the same as
- * on the settings page; it only changes how the client is led through them.
+ * Plant set-up as one big popup that works like a small spreadsheet: tabs along the top, a table in each,
+ * type into any cell and it saves when you leave it. One Go live button at the bottom.
+ * Every cell calls the same settings API as the full settings page.
  */
 export function SetupWorkspace({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { plant, can } = usePlant();
+  const canEdit = useCanEditSettings();
+  const qc = useQueryClient();
+  const { reloadProfile } = useClientAuth();
   const check = useSettings('go-live-check', can('settings.view'));
-  const [idx, setIdx] = useState(0);
-  const mainRef = useRef<HTMLDivElement>(null);
-  const steps = STEPS.filter((s) => !s.caOnly || plant.myRole === 'client_admin');
-  const step = steps[Math.min(idx, steps.length - 1)]!;
+  const params = useSettings('parameters');
+  const [tab, setTab] = useState('parameters');
+  const [startedEmpty, setStartedEmpty] = useState(false);
+  const [busy, setBusy] = useState({ pending: 0, failed: false, saved: false });
+  const [confirm, setConfirm] = useState(false);
+  const [going, setGoing] = useState(false);
+  const onBusy = useCallback(
+    (pending: number, failed: boolean) =>
+      setBusy((b) => ({ pending, failed, saved: b.saved || (pending === 0 && !failed) })),
+    [],
+  );
+
+  const tabs = TABS.filter((t) => !t.caOnly || plant.myRole === 'client_admin');
+  const current = tabs.find((t) => t.id === tab) ?? tabs[0]!;
   const items = check.data?.items ?? [];
-  const okKeys = new Set(items.filter((i) => i.ok).map((i) => i.key));
-  const done = (s: Step) => s.checks.length > 0 && s.checks.every((k) => okKeys.has(k));
-  const required = steps.filter((s) => s.checks.length > 0);
-  const doneCount = required.filter(done).length;
+  const failing = new Set(items.filter((i) => !i.ok).map((i) => i.key));
+  const left = items.filter((i) => !i.ok);
   const live = plant.setupStatus === 'live';
+  const emptyPlant = !!params.data && params.data.length === 0 && !startedEmpty;
 
-  useEffect(() => {
-    mainRef.current?.scrollTo({ top: 0 });
-  }, [step.id]);
-
-  const go = (n: number) => setIdx(Math.max(0, Math.min(steps.length - 1, n)));
-  const jumpToSection = (section: string) => {
-    const n = steps.findIndex((s) => s.sections.includes(section));
-    if (n >= 0) go(n);
-  };
+  async function goLive() {
+    setGoing(true);
+    try {
+      await clientApi.post(`/plants/${plant.id}/settings/go-live`);
+      setConfirm(false);
+      void qc.invalidateQueries({ queryKey: qk.client.plants });
+      await qc.invalidateQueries({ queryKey: qk.client.plant(plant.id) });
+      await reloadProfile();
+      toast.success(`${plant.name} is live`, {
+        description: 'Logsheets are open and reports are calculated every day.',
+      });
+      onClose();
+    } catch (e) {
+      apiErrors(e);
+    } finally {
+      setGoing(false);
+    }
+  }
 
   function body(): ReactNode {
-    switch (step.id) {
-      case 'start':
-        return <QuickStart onNext={() => go(idx + 1)} />;
-      case 'general':
-        return <GeneralSection />;
+    switch (current.id) {
       case 'parameters':
-        return <ParametersSection />;
+        return emptyPlant ? <QuickStart onEmpty={() => setStartedEmpty(true)} /> : <ParametersTab />;
       case 'constants':
-        return <ConstantsSection />;
+        return <ConstantsTab />;
       case 'stock':
-        return <StockSection />;
+        return <StockTab />;
       case 'people':
-        return (
-          <div className="space-y-10">
-            <PeopleSection kind="staff" />
-            <PeopleSection kind="safety" />
-          </div>
-        );
+        return <PeopleTab />;
       case 'cash':
-        return <CashSection />;
-      case 'contract':
-        return <ContractSection />;
+        return <CashTab />;
       default:
-        return <GoLiveSection onJump={jumpToSection} />;
+        return <ContractTab />;
     }
   }
 
@@ -259,11 +190,11 @@ export function SetupWorkspace({ open, onClose }: { open: boolean; onClose: () =
                 transition={{ duration: 0.2 }}
               />
             </D.Overlay>
-            <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center p-0 sm:p-4 lg:p-6">
+            <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center p-0 sm:px-8 sm:py-4 lg:px-20 lg:py-6">
               <D.Content
                 asChild
                 forceMount
-                // drawers and dialogs opened from a section sit outside this node; never close on their clicks
+                // drawers and dialogs opened from a sheet sit outside this node; never close on their clicks
                 onPointerDownOutside={(e) => e.preventDefault()}
                 onInteractOutside={(e) => e.preventDefault()}
               >
@@ -274,156 +205,166 @@ export function SetupWorkspace({ open, onClose }: { open: boolean; onClose: () =
                   exit={{ opacity: 0, scale: 0.98, y: 10 }}
                   transition={{ duration: 0.3, ease: EASE_OUT }}
                 >
-                  {/* header */}
-                  <header className="border-line bg-surface flex flex-wrap items-center gap-x-6 gap-y-3 border-b px-5 py-4 sm:px-7">
-                    <span className="bg-brand-50 text-brand-500 grid size-11 shrink-0 place-items-center rounded-2xl">
-                      <Rocket className="size-5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <D.Title className="text-ink-900 truncate text-lg font-semibold tracking-tight">
-                        {live ? 'Plant set-up' : `Set up ${plant.name}`}
-                      </D.Title>
-                      <D.Description className="text-ink-500 truncate text-sm">
-                        {live
-                          ? 'This plant is live. You can still review or change any step.'
-                          : `Step ${idx + 1} of ${steps.length} · ${doneCount} of ${required.length} required steps complete`}
-                      </D.Description>
-                    </div>
-                    {!live && required.length > 0 && (
-                      <ProgressBar
-                        className="hidden w-56 md:block"
-                        value={doneCount}
-                        max={required.length}
-                        tone="success"
-                        height={6}
-                      />
-                    )}
-                    <Button variant="secondary" onClick={onClose}>
-                      <X /> Save &amp; close
-                    </Button>
-                  </header>
+                  <SheetProvider canEdit={canEdit} onBusy={onBusy}>
+                    {/* header */}
+                    <header className="border-line bg-surface flex items-center gap-4 border-b px-4 py-2.5 sm:px-6">
+                      <span className="bg-brand-50 text-brand-500 grid size-9 shrink-0 place-items-center rounded-xl">
+                        <Rocket className="size-4.5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <D.Title className="text-ink-900 truncate text-base font-semibold tracking-tight">
+                          {live ? 'Plant set-up' : `Set up ${plant.name}`}
+                        </D.Title>
+                        <D.Description className="text-ink-500 truncate text-xs">
+                          Type into any cell. Each change saves when you leave the cell.
+                        </D.Description>
+                      </div>
+                      <span
+                        aria-live="polite"
+                        className={cn(
+                          'hidden items-center gap-1.5 text-xs sm:flex',
+                          busy.failed ? 'text-danger-600' : busy.pending ? 'text-ink-500' : 'text-success-600',
+                        )}
+                      >
+                        {busy.pending > 0 ? (
+                          <>
+                            <Loader2 className="size-3.5 animate-spin" /> Saving…
+                          </>
+                        ) : busy.failed ? (
+                          <>
+                            <TriangleAlert className="size-3.5" /> A change was not saved
+                          </>
+                        ) : busy.saved ? (
+                          <>
+                            <Check className="size-3.5" /> All changes saved
+                          </>
+                        ) : null}
+                      </span>
+                      <D.Close
+                        className="border-line text-ink-500 hover:bg-canvas hover:text-ink-900 grid size-9 shrink-0 place-items-center rounded-full border transition-colors"
+                        aria-label="Close"
+                      >
+                        <X className="size-4" />
+                      </D.Close>
+                    </header>
 
-                  <div className="flex min-h-0 flex-1">
-                    {/* step list (desktop) */}
+                    {/* sheet tabs */}
                     <nav
-                      aria-label="Setup steps"
-                      className="border-line bg-surface hidden w-[270px] shrink-0 overflow-y-auto border-r p-4 lg:block"
+                      aria-label="Sheets"
+                      className="border-line bg-surface scrollbar-none flex gap-1 overflow-x-auto border-b px-3 sm:px-5"
                     >
-                      <ol className="space-y-1">
-                        {steps.map((s, n) => {
-                          const active = n === idx;
-                          const ok = done(s);
-                          return (
-                            <li key={s.id}>
-                              <button
-                                type="button"
-                                onClick={() => go(n)}
-                                aria-current={active ? 'step' : undefined}
-                                className={cn(
-                                  'relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors',
-                                  active ? 'text-brand-500' : 'text-ink-700 hover:bg-canvas',
-                                )}
-                              >
-                                {active && (
-                                  <motion.span
-                                    layoutId="setup-step"
-                                    className="bg-brand-50 absolute inset-0 rounded-xl"
-                                    transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                                  />
-                                )}
-                                <span
-                                  className={cn(
-                                    'relative grid size-7 shrink-0 place-items-center rounded-full text-xs font-semibold',
-                                    ok
-                                      ? 'bg-success-600 text-white'
-                                      : active
-                                        ? 'bg-brand-500 text-white'
-                                        : 'bg-canvas text-ink-500 border-line border',
-                                  )}
-                                >
-                                  {ok ? <Check className="size-4" /> : n + 1}
-                                </span>
-                                <span className="relative min-w-0 flex-1 truncate">{s.label}</span>
-                                {s.checks.length > 0 && !ok && !live && (
-                                  <span
-                                    className="bg-danger-500 relative size-2 shrink-0 rounded-full"
-                                    title="Still needed"
-                                  />
-                                )}
-                                {s.checks.length === 0 && s.id !== 'start' && s.id !== 'review' && (
-                                  <span className="text-ink-400 relative text-[11px]">optional</span>
-                                )}
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ol>
-                    </nav>
-
-                    {/* current step */}
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      {/* step list (phones / tablets) */}
-                      <div className="scrollbar-none border-line bg-surface flex gap-2 overflow-x-auto border-b px-4 py-3 lg:hidden">
-                        {steps.map((s, n) => (
+                      {tabs.map((t) => {
+                        const active = t.id === current.id;
+                        const bad = t.checks.filter((k) => failing.has(k)).length;
+                        const ok = t.checks.length > 0 && items.length > 0 && bad === 0;
+                        return (
                           <button
-                            key={s.id}
+                            key={t.id}
                             type="button"
-                            onClick={() => go(n)}
+                            onClick={() => setTab(t.id)}
+                            aria-current={active ? 'page' : undefined}
                             className={cn(
-                              'border-line inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3.5 text-[13px] font-medium',
-                              n === idx ? 'bg-ink-900 border-ink-900 text-white' : 'bg-surface text-ink-700',
+                              'relative flex h-11 shrink-0 items-center gap-2 px-3.5 text-sm font-medium transition-colors',
+                              active ? 'text-brand-500' : 'text-ink-500 hover:text-ink-900',
                             )}
                           >
-                            {done(s) ? <Check className="text-success-600 size-4" /> : <s.icon className="size-4" />}
-                            {s.label}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div ref={mainRef} className="min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-8">
-                        <AnimatePresence mode="wait" initial={false}>
-                          <motion.div
-                            key={step.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="mx-auto max-w-5xl"
-                          >
-                            <div className="bg-brand-50/60 border-brand-100 mb-6 flex items-start gap-3 rounded-2xl border px-4 py-3">
-                              <step.icon className="text-brand-500 mt-0.5 size-5 shrink-0" />
-                              <p className="text-ink-700 text-sm">{step.intro}</p>
-                            </div>
-                            {body()}
-                          </motion.div>
-                        </AnimatePresence>
-                      </div>
-
-                      {/* footer */}
-                      <footer className="border-line bg-surface flex items-center justify-between gap-3 border-t px-5 py-3.5 sm:px-8">
-                        <Button variant="ghost" onClick={() => go(idx - 1)} disabled={idx === 0}>
-                          <ArrowLeft /> Back
-                        </Button>
-                        {idx < steps.length - 1 ? (
-                          <div className="flex items-center gap-3">
-                            {step.checks.length === 0 && step.id !== 'start' && (
-                              <span className="text-ink-400 hidden text-xs sm:inline">
-                                Optional: skip if it does not apply
+                            <t.icon className="size-4" />
+                            {t.label}
+                            {!live && bad > 0 && (
+                              <span className="bg-danger-500 grid min-w-4.5 place-items-center rounded-full px-1 text-[10px] font-semibold text-white">
+                                {bad}
                               </span>
                             )}
-                            <Button onClick={() => go(idx + 1)}>
-                              {step.checks.length === 0 && step.id !== 'start' ? 'Skip or continue' : 'Continue'}{' '}
-                              <ArrowRight />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button variant="secondary" onClick={onClose}>
-                            Close
-                          </Button>
-                        )}
-                      </footer>
+                            {!live && ok && <Check className="text-success-600 size-4" />}
+                            {active && (
+                              <motion.span
+                                layoutId="sheet-tab"
+                                className="bg-brand-500 absolute inset-x-2 bottom-0 h-0.5 rounded-full"
+                                transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </nav>
+
+                    {/* the sheet */}
+                    <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+                      <AnimatePresence mode="wait" initial={false}>
+                        <motion.div
+                          key={current.id + (emptyPlant ? '-empty' : '')}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.18 }}
+                        >
+                          <div className="mx-auto w-fit max-w-full min-w-[min(100%,760px)]">{body()}</div>
+                        </motion.div>
+                      </AnimatePresence>
                     </div>
-                  </div>
+
+                    {/* footer: what is left, and the one button that matters */}
+                    <footer className="border-line bg-surface flex flex-wrap items-center justify-between gap-3 border-t px-4 py-2.5 sm:px-6">
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                        {live ? (
+                          <span className="text-success-600 flex items-center gap-1.5 text-sm font-medium">
+                            <CheckCircle2 className="size-4" /> This plant is live
+                          </span>
+                        ) : check.isLoading ? null : left.length === 0 ? (
+                          <span className="text-success-600 flex items-center gap-1.5 text-sm font-medium">
+                            <CheckCircle2 className="size-4" /> Everything is filled in. You can go live.
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-ink-500 text-sm">Still needed:</span>
+                            {left.slice(0, 4).map((i) => {
+                              const target = tabOfCheck(i.key);
+                              return (
+                                <button
+                                  key={i.key}
+                                  type="button"
+                                  title={i.message}
+                                  onClick={() => target && setTab(target)}
+                                  className="bg-danger-50 text-danger-600 hover:bg-danger-100 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+                                >
+                                  {CHECK_SECTION[i.key]?.label ?? i.key}
+                                </button>
+                              );
+                            })}
+                            {left.length > 4 && <span className="text-ink-400 text-xs">+{left.length - 4} more</span>}
+                          </>
+                        )}
+                      </div>
+                      {!live && (
+                        <Button
+                          size="lg"
+                          disabled={!canEdit || !check.data?.ready || busy.pending > 0}
+                          onClick={() => setConfirm(true)}
+                        >
+                          <Rocket /> Go live
+                        </Button>
+                      )}
+                    </footer>
+                  </SheetProvider>
+
+                  <Modal
+                    open={confirm}
+                    onOpenChange={(o) => !going && setConfirm(o)}
+                    tone="success"
+                    icon={<Rocket />}
+                    title={`Take ${plant.name} live?`}
+                    description="Editors can start filling logsheets and the reports start calculating. The MIS start date can then only move earlier."
+                    footer={
+                      <>
+                        <Button variant="ghost" onClick={() => setConfirm(false)} disabled={going}>
+                          Not yet
+                        </Button>
+                        <Button onClick={goLive} loading={going}>
+                          <Rocket /> Go live
+                        </Button>
+                      </>
+                    }
+                  />
                 </motion.div>
               </D.Content>
             </div>

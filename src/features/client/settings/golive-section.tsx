@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, CheckCircle2, ClipboardList, FileSpreadsheet, Rocket, XCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Modal } from '@/components/ui/dialog';
@@ -13,7 +13,6 @@ import { clientApi } from '@/lib/api';
 import { useClientAuth } from '@/lib/auth/client-auth';
 import { qk } from '@/lib/query/keys';
 import { cn } from '@/lib/utils';
-import { Ring } from '../logsheet/blocks';
 import { usePlant } from '../plant-context';
 import { SectionHeader, useCanEditSettings } from './parts';
 import { apiErrors, useSettings, useSettingsWrite } from './queries';
@@ -32,35 +31,8 @@ export const CHECK_SECTION: Record<string, { section: string; label: string }> =
   safety: { section: 'safety', label: 'Safety requirements' },
 };
 
-/** A checklist row: a page link on the settings page, a step jump inside the guided-setup popup. */
-function ItemLink({
-  section,
-  href,
-  onJump,
-  className,
-  children,
-}: {
-  section: string;
-  href: string;
-  onJump?: (section: string) => void;
-  className: string;
-  children: ReactNode;
-}) {
-  if (onJump)
-    return (
-      <button type="button" className={className} onClick={() => onJump(section)}>
-        {children}
-      </button>
-    );
-  return (
-    <Link href={href} className={className}>
-      {children}
-    </Link>
-  );
-}
-
 /** §11.12 Go-live checklist (SET-10): every item green → Client Admin takes the plant live. */
-export function GoLiveSection({ onJump }: { onJump?: (section: string) => void } = {}) {
+export function GoLiveSection() {
   const { plant } = usePlant();
   const q = useSettings('go-live-check');
   const canEdit = useCanEditSettings();
@@ -132,23 +104,20 @@ export function GoLiveSection({ onJump }: { onJump?: (section: string) => void }
         </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-          <Card className="flex flex-col items-center justify-center text-center">
+          <Card className="flex flex-col justify-center">
             {q.isLoading ? (
-              <Skeleton className="size-36 rounded-full" />
+              <Skeleton className="h-12 w-32" />
             ) : (
-              <div className="relative grid place-items-center">
-                <Ring value={ok} max={items.length || 1} size={150} stroke={12} />
-                <div className="absolute text-center">
-                  <p className="text-ink-900 tabular text-3xl font-bold">
-                    {ok}/{items.length}
-                  </p>
-                  <p className="text-ink-500 text-xs">complete</p>
-                </div>
-              </div>
+              <>
+                <p className="text-ink-900 tabular text-3xl font-bold">
+                  {ok}/{items.length}
+                </p>
+                <p className="text-ink-500 text-sm">checks complete</p>
+                <p className="text-ink-700 mt-3 text-sm">
+                  {q.data?.ready ? 'Everything is ready.' : 'A few settings are still missing.'}
+                </p>
+              </>
             )}
-            <p className="text-ink-700 mt-5 text-sm">
-              {q.data?.ready ? 'Everything is ready.' : 'A few settings are still missing.'}
-            </p>
             {canEdit && (
               <Button className="mt-4 w-full" size="lg" disabled={!q.data?.ready} onClick={() => setConfirm(true)}>
                 <Rocket /> Go live
@@ -167,12 +136,10 @@ export function GoLiveSection({ onJump }: { onJump?: (section: string) => void }
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: n * 0.04 }}
                   >
-                    <ItemLink
-                      section={CHECK_SECTION[i.key]?.section ?? 'general'}
+                    <Link
                       href={`${base}/settings/${CHECK_SECTION[i.key]?.section ?? 'general'}`}
-                      onJump={onJump}
                       className={cn(
-                        'group flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors',
+                        'group flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors',
                         i.ok ? 'border-line hover:bg-canvas' : 'border-danger-100 bg-danger-50/50 hover:bg-danger-50',
                       )}
                     >
@@ -186,7 +153,7 @@ export function GoLiveSection({ onJump }: { onJump?: (section: string) => void }
                         {!i.ok && <p className="text-danger-600 text-xs">{i.message}</p>}
                       </div>
                       <ArrowRight className="text-ink-300 group-hover:text-ink-700 size-4 transition-colors" />
-                    </ItemLink>
+                    </Link>
                   </motion.li>
                 ),
               )}

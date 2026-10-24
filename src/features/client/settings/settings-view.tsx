@@ -164,28 +164,16 @@ export function SettingsView() {
       />
       {pending && items.length > 0 && (
         <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="bg-premium relative mb-6 overflow-hidden text-white">
-            <div className="dot-grid absolute inset-0 opacity-20" />
-            <div className="relative flex flex-wrap items-center gap-5">
-              <span className="grid size-12 place-items-center rounded-2xl bg-white/15">
-                <Rocket className="size-6" />
-              </span>
+          <Card className="mb-6">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="min-w-[220px] flex-1">
-                <p className="text-base font-semibold">Finish setting up {plant.name}</p>
-                <p className="text-sm text-white/70">
-                  {okCount} of {items.length} checks complete — logsheets open after go-live.
+                <p className="text-ink-900 text-base font-semibold">Finish setting up {plant.name}</p>
+                <p className="text-ink-500 text-sm">
+                  {okCount} of {items.length} checks complete. Logsheets open after go-live.
                 </p>
-                <ProgressBar
-                  className="mt-3 max-w-md bg-white/20"
-                  value={okCount}
-                  max={items.length}
-                  tone="success"
-                  height={6}
-                />
+                <ProgressBar className="mt-3 max-w-md" value={okCount} max={items.length} tone="success" height={6} />
               </div>
-              <Button variant="white" onClick={() => setGuided(true)}>
-                Continue guided setup
-              </Button>
+              <Button onClick={() => setGuided(true)}>Continue setup</Button>
             </div>
           </Card>
         </motion.div>
