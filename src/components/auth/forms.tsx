@@ -18,11 +18,15 @@ import { Field, FormError } from '@/components/ui/field';
 import { Input, PasswordInput, PasswordStrength } from '@/components/ui/input';
 import { CopyButton, Skeleton } from '@/components/ui/misc';
 import { OtpInput } from '@/components/ui/otp-input';
-import { errorMessage, fieldErrors, hasCode } from '@/lib/api';
+import { errorMessage, fieldErrors, hasCode, isApiError } from '@/lib/api';
 import type { AuthContextValue } from '@/lib/auth/create-auth';
 import type { EnrolSecret } from '@/lib/auth/types';
+import { useBackendReady, wakeBackend } from '@/lib/wake';
 import { email as emailSchema, password as passwordSchema } from '@/shared/schemas/common';
 import { AuthHeading } from './auth-layout';
+
+/** 502/503/504 happen only during a cold start; we wait and retry silently instead of surfacing an error. */
+const isWakingUp = (e: unknown) => isApiError(e) && (e.status === 502 || e.status === 503 || e.status === 504);
 
 type AuthApi = Pick<
   AuthContextValue<unknown>,
@@ -54,6 +58,8 @@ export function LoginForm({
 }) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [waking, setWaking] = useState(false);
+  const backendReady = useBackendReady();
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
@@ -62,13 +68,31 @@ export function LoginForm({
 
   const onSubmit = handleSubmit(async (v) => {
     setServerError(null);
+    // Wait until the host answers /health; a sleeping Render instance needs 30–60 s to come up.
+    if (!backendReady) setWaking(true);
     try {
-      const step = await auth.login(v.email, v.password);
+      await wakeBackend();
+      // On a cold start the backend sometimes answers /health moments before the first POST reaches it,
+      // so a 5xx can still slip through on the very first login call. One silent retry after a short pause.
+      let step: Awaited<ReturnType<typeof auth.login>>;
+      try {
+        step = await auth.login(v.email, v.password);
+      } catch (e) {
+        if (!isWakingUp(e)) throw e;
+        await new Promise((r) => setTimeout(r, 2500));
+        step = await auth.login(v.email, v.password);
+      }
       if (step === 'verify') router.push(`${base}/login/2fa`);
       else if (step === 'enrol') router.push(`${base}/login/enrol`);
     } catch (e) {
-      setServerError(errorMessage(e));
-      if (hasCode(e, 'INVALID_CREDENTIALS')) form.setValue('password', '');
+      if (isWakingUp(e)) {
+        setServerError('The server is still starting up. Please try once more in a moment.');
+      } else {
+        setServerError(errorMessage(e));
+        if (hasCode(e, 'INVALID_CREDENTIALS')) form.setValue('password', '');
+      }
+    } finally {
+      setWaking(false);
     }
   });
 
@@ -107,8 +131,13 @@ export function LoginForm({
           />
         </Field>
         <Button type="submit" size="lg" block loading={formState.isSubmitting}>
-          Sign in
+          {waking || formState.isSubmitting ? (waking ? 'Starting server…' : 'Signing in…') : 'Sign in'}
         </Button>
+        {!backendReady && !waking && !serverError && (
+          <p className="text-ink-400 -mt-2 text-center text-xs">
+            Preparing the server — this is quick after the first use.
+          </p>
+        )}
       </form>
     </>
   );

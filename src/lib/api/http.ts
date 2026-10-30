@@ -76,8 +76,11 @@ export interface ApiClient {
 }
 
 const TRANSIENT_STATUSES = new Set([502, 503, 504]);
-// ~70 s in total: long enough to ride out a cold start of a sleeping host (Render free tier takes 30–60 s).
-const RETRY_BACKOFF = [600, 1500, 3000, 5000, ...Array<number>(12).fill(5000)];
+// GETs can retry for ~70 s so a dashboard load rides out a cold start of a sleeping host (Render free tier takes 30–60 s).
+const RETRY_BACKOFF_GET = [600, 1500, 3000, 5000, ...Array<number>(12).fill(5000)];
+// POSTs (login, mutations) must stay well under the backend's login rate limit of 10/min per IP — otherwise a cold
+// start retry loop trips a 429 just as the host comes back up. Two tries with a long gap is enough for the wake-up.
+const RETRY_BACKOFF_POST = [8000, 20000];
 const sleepMs = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export function createApiClient(cfg: { name: 'client' | 'admin'; baseUrl: string; refreshPath: string }): ApiClient {
@@ -118,6 +121,7 @@ export function createApiClient(cfg: { name: 'client' | 'admin'; baseUrl: string
 
     // Only retry-safe requests: GETs, auth calls, or explicitly idempotent writes.
     const canRetry = method === 'GET' || path.includes('/auth/') || !!opts.idempotencyKey;
+    const backoff = method === 'GET' ? RETRY_BACKOFF_GET : RETRY_BACKOFF_POST;
 
     for (let tryNo = 0; ; tryNo++) {
       let res: Response;
@@ -132,15 +136,15 @@ export function createApiClient(cfg: { name: 'client' | 'admin'; baseUrl: string
         });
       } catch (e) {
         if (e instanceof Error && e.name === 'AbortError') throw e;
-        if (canRetry && tryNo < RETRY_BACKOFF.length) { await sleepMs(RETRY_BACKOFF[tryNo]); continue; }
+        if (canRetry && tryNo < backoff.length) { await sleepMs(backoff[tryNo]); continue; }
         throw new ApiError(0, 'NETWORK_ERROR', 'Cannot reach the server.');
       }
 
       if (res.ok) return res;
 
       // Transient gateway errors: retry silently before surfacing to the user.
-      if (TRANSIENT_STATUSES.has(res.status) && canRetry && tryNo < RETRY_BACKOFF.length) {
-        await sleepMs(RETRY_BACKOFF[tryNo]);
+      if (TRANSIENT_STATUSES.has(res.status) && canRetry && tryNo < backoff.length) {
+        await sleepMs(backoff[tryNo]);
         continue;
       }
 
