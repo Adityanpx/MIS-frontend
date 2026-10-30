@@ -216,7 +216,9 @@ export function SetupWorkspace({ open, onClose }: { open: boolean; onClose: () =
                           {live ? 'Plant set-up' : `Set up ${plant.name}`}
                         </D.Title>
                         <D.Description className="text-ink-500 truncate text-xs">
-                          Type into any cell. Each change saves when you leave the cell.
+                          {live
+                            ? 'Type into any cell. A change applies from today; earlier days keep their old values.'
+                            : 'Type into any cell. Each change saves when you leave the cell.'}
                         </D.Description>
                       </div>
                       <span

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/popover';
 import { clientApi } from '@/lib/api';
-import { addDays } from '@/lib/dates';
+import { addDays, todayIST } from '@/lib/dates';
 import { fmtDate, fmtNum } from '@/lib/format';
 import { usePlant } from '../../plant-context';
 import { useSettings } from '../queries';
@@ -79,6 +79,7 @@ export function StockTab() {
               <EditCell
                 kind="number"
                 value={str(i.openingBalance)}
+                disabled={sheet.live}
                 required
                 onCommit={(v) => {
                   const n = parseNum(v, { min: 0 });
@@ -91,6 +92,7 @@ export function StockTab() {
               <EditCell
                 kind="date"
                 value={i.openingDate ?? ''}
+                disabled={sheet.live}
                 required
                 onCommit={(v) => patch(i.id, { openingDate: v })}
               />
@@ -125,7 +127,7 @@ export function StockTab() {
               { key: 'unit', placeholder: 'Unit' },
               { key: 'std', placeholder: 'Daily use', kind: 'number' },
               { key: 'open', placeholder: 'Opening stock', kind: 'number', initial: '0' },
-              { key: 'date', kind: 'date', initial: dayBefore },
+              { key: 'date', kind: 'date', initial: sheet.live ? todayIST() : dayBefore },
               { key: 'min', placeholder: 'Alert below', kind: 'number' },
               {},
             ]}
@@ -137,7 +139,7 @@ export function StockTab() {
                 unit: v.unit,
                 stdPerDay: parseNum(v.std ?? '', { min: 0 }) ?? 0,
                 openingBalance: parseNum(v.open ?? '', { min: 0 }) ?? 0,
-                openingDate: v.date || dayBefore,
+                openingDate: v.date || (sheet.live ? todayIST() : dayBefore),
                 minLevel: parseNum(v.min ?? '', { min: 0 }),
               });
             }}

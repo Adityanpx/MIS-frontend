@@ -24,7 +24,7 @@ import { PageHeader } from '@/components/shell/page-header';
 import { StatusBadge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { EmptyState, ProgressBar } from '@/components/ui/misc';
+import { EmptyState } from '@/components/ui/misc';
 import { cn } from '@/lib/utils';
 import { usePlant } from '../plant-context';
 import { CashSection } from './cash-section';
@@ -107,6 +107,9 @@ const SECTIONS: SectionDef[] = [
   },
 ];
 
+/** sections the popup (its sheet tabs) handles, before and after go-live */
+const IN_SETUP_POPUP = new Set(['parameters', 'constants', 'stock', 'staff', 'safety', 'cash', 'contract']);
+
 /** /plants/:id/settings/[section] — every plant setting in one place (PRD §11). */
 export function SettingsView() {
   const { plant, can } = usePlant();
@@ -128,8 +131,14 @@ export function SettingsView() {
     }
     setGuided(true);
   }, [canGuide, plant.id]);
-  const visible = SECTIONS.filter((s) => !s.caOnly || plant.myRole === 'client_admin');
-  const id = params.section?.[0] ?? (pending ? 'go-live' : 'general');
+  // These sections are edited in the popup's sheets, so the menu leaves them out. The Go-live page is only needed while pending.
+  const visible = SECTIONS.filter(
+    (s) =>
+      (!s.caOnly || plant.myRole === 'client_admin') && !(IN_SETUP_POPUP.has(s.id) || (pending && s.id === 'go-live')),
+  );
+  const requested = params.section?.[0];
+  const id =
+    !requested || IN_SETUP_POPUP.has(requested) || (pending && requested === 'go-live') ? 'general' : requested;
   if ((params.section?.length ?? 0) > 1) notFound();
   const current = visible.find((s) => s.id === id);
 
@@ -161,22 +170,42 @@ export function SettingsView() {
         title="Plant settings"
         subtitle={`${plant.name} · ${plant.code}`}
         badge={<StatusBadge status={plant.setupStatus} />}
+        actions={
+          plant.setupStatus === 'live' && can('settings.edit') ? (
+            <Button variant="secondary" onClick={() => setGuided(true)}>
+              <Rocket /> Edit parameters &amp; set-up
+            </Button>
+          ) : undefined
+        }
       />
-      {pending && items.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="mb-6">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="min-w-[220px] flex-1">
-                <p className="text-ink-900 text-base font-semibold">Finish setting up {plant.name}</p>
-                <p className="text-ink-500 text-sm">
-                  {okCount} of {items.length} checks complete. Logsheets open after go-live.
-                </p>
-                <ProgressBar className="mt-3 max-w-md" value={okCount} max={items.length} tone="success" height={6} />
+      {canGuide && items.length > 0 && (
+        <div className="border-brand-100 bg-brand-50/60 mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border px-5 py-4">
+          <div className="min-w-[240px] flex-1">
+            <p className="text-ink-900 text-sm font-semibold">
+              {okCount === items.length
+                ? 'Everything is filled in. You can go live.'
+                : `Setup is not finished: ${items.length - okCount} of ${items.length} checks still need your input`}
+            </p>
+            {okCount < items.length && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {items
+                  .filter((i) => !i.ok)
+                  .map((i) => (
+                    <span
+                      key={i.key}
+                      title={i.message}
+                      className="text-danger-600 rounded-full bg-white px-2.5 py-0.5 text-xs font-medium"
+                    >
+                      {CHECK_SECTION[i.key]?.label ?? i.key}
+                    </span>
+                  ))}
               </div>
-              <Button onClick={() => setGuided(true)}>Continue setup</Button>
-            </div>
-          </Card>
-        </motion.div>
+            )}
+          </div>
+          <Button onClick={() => setGuided(true)}>
+            <Rocket /> {okCount === items.length ? 'Review & go live' : 'Continue remaining setup'}
+          </Button>
+        </div>
       )}
       <div className="grid items-start gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
         {/* desktop: vertical menu · phones: scrolling pills */}

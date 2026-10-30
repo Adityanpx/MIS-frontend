@@ -26,6 +26,8 @@ interface SheetCtx {
   eff: { effectiveFrom: string; reason?: string };
   run: <T>(fn: () => Promise<T>) => Promise<T>;
   canEdit: boolean;
+  /** the plant is live: changes apply from today and opening balances are locked */
+  live: boolean;
 }
 const Ctx = createContext<SheetCtx | null>(null);
 export const useSheet = () => {
@@ -47,12 +49,18 @@ export function SheetProvider({
   const qc = useQueryClient();
   const pending = useRef(0);
   const failed = useRef(false);
+  const live = plant.setupStatus === 'live';
+  // Before go-live a value applies from the MIS start, so it replaces the template's row. After go-live it
+  // applies from today and earlier days keep their old value (the API's default).
   const eff = useMemo<SheetCtx['eff']>(
-    () => ({
-      effectiveFrom: plant.misStart,
-      ...(plant.misStart < todayIST() ? { reason: 'Plant set-up' } : {}),
-    }),
-    [plant.misStart],
+    () =>
+      live
+        ? ({} as SheetCtx['eff'])
+        : {
+            effectiveFrom: plant.misStart,
+            ...(plant.misStart < todayIST() ? { reason: 'Plant set-up' } : {}),
+          },
+    [plant.misStart, live],
   );
 
   const run = useCallback(
@@ -77,7 +85,7 @@ export function SheetProvider({
     [qc, plant.id, onBusy],
   );
 
-  const value = useMemo(() => ({ eff, run, canEdit }), [eff, run, canEdit]);
+  const value = useMemo(() => ({ eff, run, canEdit, live }), [eff, run, canEdit, live]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

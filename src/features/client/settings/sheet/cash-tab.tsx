@@ -4,12 +4,13 @@ import { clientApi } from '@/lib/api';
 import { addDays } from '@/lib/dates';
 import { usePlant } from '../../plant-context';
 import { useSettings } from '../queries';
-import { EditCell, parseNum, SheetBar, SheetTable, Td, Th } from './cells';
+import { EditCell, parseNum, SheetBar, SheetTable, Td, Th, useSheet } from './cells';
 
 const str = (n: number | null | undefined) => (n === null || n === undefined ? '' : String(n));
 
 export function CashTab() {
   const { plant } = usePlant();
+  const sheet = useSheet();
   const q = useSettings('cash');
   if (!q.data) return null;
   const c = q.data;
@@ -33,6 +34,7 @@ export function CashTab() {
             <EditCell
               kind="number"
               value={str(c.cashOpening)}
+              disabled={sheet.live}
               required
               onCommit={(v) => {
                 const n = parseNum(v, { min: 0 });
@@ -48,6 +50,7 @@ export function CashTab() {
             <EditCell
               kind="date"
               value={c.cashOpeningDate ?? ''}
+              disabled={sheet.live}
               required
               onCommit={(v) => patch({ cashOpeningDate: v })}
             />
