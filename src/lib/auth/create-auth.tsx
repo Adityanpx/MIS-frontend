@@ -101,7 +101,7 @@ export function createAuth<P>(cfg: AuthConfig<P>) {
     const end = useCallback(
       (reason: EndReason) => {
         const wasActAs = actAsRef.current;
-        wipe();
+        wipe();    
         setEndReason(wasActAs && reason !== 'logout' ? 'act_as_ended' : reason);
         setStatusBoth(wasActAs ? 'ended' : 'anonymous');
       },
