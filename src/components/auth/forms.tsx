@@ -68,12 +68,11 @@ export function LoginForm({
 
   const onSubmit = handleSubmit(async (v) => {
     setServerError(null);
-    // Wait until the host answers /health; a sleeping Render instance needs 30–60 s to come up.
-    if (!backendReady) setWaking(true);
+    if (!backendReady) {
+      setWaking(true);
+      try { await wakeBackend(); } finally { setWaking(false); }
+    }
     try {
-      await wakeBackend();
-      // On a cold start the backend sometimes answers /health moments before the first POST reaches it,
-      // so a 5xx can still slip through on the very first login call. One silent retry after a short pause.
       let step: Awaited<ReturnType<typeof auth.login>>;
       try {
         step = await auth.login(v.email, v.password);
@@ -86,13 +85,15 @@ export function LoginForm({
       else if (step === 'enrol') router.push(`${base}/login/enrol`);
     } catch (e) {
       if (isWakingUp(e)) {
-        setServerError('The server is still starting up. Please try once more in a moment.');
+        setServerError('The server is still starting up. Please wait a moment and try again.');
+      } else if (hasCode(e, 'RATE_LIMITED')) {
+        setServerError('Too many sign-in attempts. Please wait a minute before trying again.');
+      } else if (hasCode(e, 'INVALID_CREDENTIALS')) {
+        setServerError(errorMessage(e));
+        form.setValue('password', '');
       } else {
         setServerError(errorMessage(e));
-        if (hasCode(e, 'INVALID_CREDENTIALS')) form.setValue('password', '');
       }
-    } finally {
-      setWaking(false);
     }
   });
 
@@ -130,12 +131,12 @@ export function LoginForm({
             {...register('password')}
           />
         </Field>
-        <Button type="submit" size="lg" block loading={formState.isSubmitting}>
-          {waking || formState.isSubmitting ? (waking ? 'Starting server…' : 'Signing in…') : 'Sign in'}
+        <Button type="submit" size="lg" block loading={waking || formState.isSubmitting} disabled={waking}>
+          {waking ? 'Starting server…' : formState.isSubmitting ? 'Signing in…' : 'Sign in'}
         </Button>
         {!backendReady && !waking && !serverError && (
           <p className="text-ink-400 -mt-2 text-center text-xs">
-            Preparing the server — this is quick after the first use.
+            The server is waking up — first sign-in may take up to 60 seconds.
           </p>
         )}
       </form>

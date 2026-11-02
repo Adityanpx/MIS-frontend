@@ -119,8 +119,11 @@ export function createApiClient(cfg: { name: 'client' | 'admin'; baseUrl: string
     if (opts.idempotencyKey)
       headers.set('Idempotency-Key', opts.idempotencyKey === true ? newId() : opts.idempotencyKey);
 
-    // Only retry-safe requests: GETs, auth calls, or explicitly idempotent writes.
-    const canRetry = method === 'GET' || path.includes('/auth/') || !!opts.idempotencyKey;
+    // Retry-safe requests: GETs, auth refreshes, or explicitly idempotent writes.
+    // Login/password POSTs are NOT retried here — the login form manages its own wake-up retry
+    // to avoid burning through the 10-req/min rate limit during a cold start.
+    const isLoginPath = path.includes('/auth/login') || path.includes('/auth/forgot') || path.includes('/auth/reset');
+    const canRetry = method === 'GET' || (path.includes('/auth/') && !isLoginPath) || !!opts.idempotencyKey;
     const backoff = method === 'GET' ? RETRY_BACKOFF_GET : RETRY_BACKOFF_POST;
 
     for (let tryNo = 0; ; tryNo++) {
