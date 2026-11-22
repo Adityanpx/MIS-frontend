@@ -5,7 +5,6 @@ import {
   Download,
   Factory,
   FilePenLine,
-  FileSpreadsheet,
   FileText,
   Gauge,
   History,
@@ -53,8 +52,6 @@ export function plantLinks(plant: PlantAccess): NavLink[] {
     links.push({ label: 'Corrections', href: `${base}/corrections`, icon: FilePenLine });
   if (can(role, 'settings.view'))
     links.push({ label: 'Plant settings', href: `${base}/settings`, icon: SlidersHorizontal });
-  if (can(role, 'imports.manage'))
-    links.push({ label: 'Excel import', href: `${base}/imports`, icon: FileSpreadsheet });
   // Maintenance link (always visible; the page itself handles access)
   links.push({ label: 'Maintenance', href: `${base}/maintenance`, icon: Wrench });
   return links;

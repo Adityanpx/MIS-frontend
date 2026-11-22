@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ChevronRight,
   FilePenLine,
-  FileSpreadsheet,
   PencilLine,
 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -150,13 +149,6 @@ export function LogsheetCalendar() {
         actions={
           <>
             <MonthNav value={month} onChange={setMonth} min={plant.misStart} max={pd.max} />
-            {can('imports.manage') && (
-              <Button variant="secondary" asChild>
-                <Link href={`/plants/${plant.id}/imports`}>
-                  <FileSpreadsheet /> Import Excel
-                </Link>
-              </Button>
-            )}
             {continueDay && can('logsheet.edit') && (
               <Button asChild>
                 <Link href={pd.hrefFor('logsheet', continueDay.date)}>

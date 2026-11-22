@@ -27,7 +27,6 @@ export const qk = {
     logHistory: (plantId: string, date: string) => ['c', 'plant', plantId, 'logsheets', 'history', date] as const,
     corrections: (plantId: string, status: string) => ['c', 'plant', plantId, 'corrections', status] as const,
     settings: (plantId: string, section: string) => ['c', 'plant', plantId, 'settings', section] as const,
-    importJob: (plantId: string, id: string) => ['c', 'plant', plantId, 'imports', id] as const,
     // File 4
     report: (plantId: string, slug: string, query: Record<string, unknown>) =>
       ['c', 'plant', plantId, 'report', slug, query] as const,

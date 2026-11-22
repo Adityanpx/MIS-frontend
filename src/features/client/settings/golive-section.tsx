@@ -1,7 +1,7 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, CheckCircle2, ClipboardList, FileSpreadsheet, Rocket, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ClipboardList, Rocket, XCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -89,11 +89,6 @@ export function GoLiveSection() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" asChild>
-                <Link href={`${base}/imports`}>
-                  <FileSpreadsheet /> Import history
-                </Link>
-              </Button>
               <Button asChild>
                 <Link href={`${base}/logsheet`}>
                   <ClipboardList /> Open logsheets

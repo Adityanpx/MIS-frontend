@@ -16,7 +16,6 @@ export type PlantAction =
   | 'pdf.zip'
   | 'reports.view'
   | 'corrections.manage'
-  | 'imports.manage'
   | 'revenue.view';
 
 const MATRIX: Record<PlantAction, MyPlantRole[]> = {
@@ -31,7 +30,6 @@ const MATRIX: Record<PlantAction, MyPlantRole[]> = {
   'pdf.zip': ['client_admin'],
   'reports.view': ['client_admin', 'editor', 'checker', 'verifier', 'viewer'],
   'corrections.manage': ['client_admin'],
-  'imports.manage': ['client_admin'],
   'revenue.view': ['client_admin'],
 };
 

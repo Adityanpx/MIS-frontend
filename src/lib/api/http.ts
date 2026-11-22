@@ -62,7 +62,7 @@ export interface ApiClient {
   put<T = void>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>;
   patch<T = void>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>;
   del<T = void>(path: string, opts?: RequestOptions): Promise<T>;
-  /** multipart/form-data (logos, proofs, TDS certificates, imports). */
+  /** multipart/form-data (logos, proofs, TDS certificates). */
   upload<T>(path: string, form: FormData, opts?: RequestOptions): Promise<T>;
   /**
    * File download: handles both API styles —

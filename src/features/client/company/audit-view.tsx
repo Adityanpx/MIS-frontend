@@ -27,7 +27,6 @@ const ENTITIES = [
   { value: 'all', label: 'Everything' },
   { value: 'logsheet', label: 'Logsheets' },
   { value: 'correction_request', label: 'Correction requests' },
-  { value: 'import', label: 'Excel imports' },
   { value: 'parameter', label: 'Parameters' },
   { value: 'stock_item', label: 'Stock items' },
   { value: 'contract_year', label: 'Contract years' },

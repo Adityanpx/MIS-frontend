@@ -414,7 +414,7 @@ export function ParameterDrawer({
         </div>
       )}
       <Group title="Basics">
-        {inp('code', 'Code', { mono: true, required: true, hint: 'UPPER_CASE, used in formulas and imports' })}
+        {inp('code', 'Code', { mono: true, required: true, hint: 'UPPER_CASE, used in formulas' })}
         {inp('name', 'Name', { required: true })}
         {inp('shortName', 'Short name', { hint: 'Used on dashboard cards' })}
         {sel('groupKey', 'Group', opt(GROUP_LABEL))}
