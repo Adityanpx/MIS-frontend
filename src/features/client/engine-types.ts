@@ -273,14 +273,6 @@ export interface MisTabsPayload {
   maintenance: MaintenanceTabPayload | null;
 }
 
-// v1.1 MIS response shape
-export interface MisReportV11 {
-  header: MisReportHeader;
-  tabs: MisTabsPayload;
-  meta: { generatedAt: string };
-  versions: { data: number; settings: number };
-}
-
 // ---------------------------------------------------------------------------
 // Legacy MIS (v1.0) — kept for fallback
 // ---------------------------------------------------------------------------

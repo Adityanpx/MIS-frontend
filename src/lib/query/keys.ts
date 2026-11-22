@@ -39,8 +39,6 @@ export const qk = {
     invoice: (id: string) => ['c', 'billing', 'invoice', id] as const,
     // v1.1
     portfolio: (date: string, standard: string) => ['c', 'portfolio', date, standard] as const,
-    maintenanceTab: (plantId: string, date: string) =>
-      ['c', 'plant', plantId, 'maintenance', 'tab', date] as const,
     breakdowns: (plantId: string, filters: unknown) =>
       ['c', 'plant', plantId, 'maintenance', 'breakdowns', filters] as const,
     breakdown: (plantId: string, id: string) =>

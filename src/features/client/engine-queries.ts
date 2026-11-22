@@ -7,10 +7,8 @@ import { qk } from '@/lib/query/keys';
 import type { DashboardLayout, DashboardWidgetId } from '@/shared/schemas/dashboard';
 import type {
   DashboardData,
-  MaintenanceTabPayload,
   MisReport,
   Overview,
-  PdfDoc,
   PortfolioRow,
   ReportTable,
   TrendRow,
@@ -94,15 +92,6 @@ export function useSaveLayout(plantId: string) {
   });
 }
 
-export function usePdfList(plantId: string, year: number, month: number, enabled = true) {
-  return useQuery({
-    queryKey: qk.client.pdfs(plantId, year, month),
-    queryFn: () => clientApi.get<PdfDoc[]>(`/plants/${plantId}/pdfs`, { query: { year, month } }),
-    enabled: useSignedIn() && enabled,
-    staleTime: 30_000,
-  });
-}
-
 // ---------------------------------------------------------------------------
 // v1.1 queries
 // ---------------------------------------------------------------------------
@@ -123,15 +112,5 @@ export function usePortfolio(
       clientApi.get<PortfolioResponse>('/company/portfolio', { query: { date, standard } }),
     enabled: useSignedIn() && !!date,
     staleTime: 30_000,
-  });
-}
-
-export function useMaintenanceTab(plantId: string, date: string) {
-  return useQuery({
-    queryKey: qk.client.maintenanceTab(plantId, date),
-    queryFn: () =>
-      clientApi.get<MaintenanceTabPayload>(`/plants/${plantId}/maintenance`, { query: { date } }),
-    enabled: useSignedIn() && !!date,
-    staleTime: ENGINE_STALE,
   });
 }

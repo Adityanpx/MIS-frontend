@@ -1,11 +1,10 @@
 'use client';
 
-import { motion } from 'motion/react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { StatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
-import { fmtDate, fmtDateTime, fmtNum, fmtPct, fmtMoney0 } from '@/lib/format';
+import { fmtDate, fmtNum, fmtPct, fmtMoney0 } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type {
   BreakdownSummary,
@@ -16,12 +15,9 @@ import type {
   MisReport,
   ParamRow,
   RegisterRow,
-  ResultMode,
   StandardKind,
-  StandardsShown,
-  Triple,
 } from '../engine-types';
-import { flagBg, flagText, formatResult, perKindOf, visibleKinds } from '../engine-ui';
+import { flagText, perKindOf } from '../engine-ui';
 
 /* ------------------------------------------------------------------ table primitives (MIS look) */
 const th =
@@ -42,133 +38,8 @@ export function MisTableShell({ children, minWidth = 1100 }: { children: ReactNo
 
 const signed = (v: number | null, decimals: number) => (v === null ? '—' : `${v > 0 ? '+' : ''}${fmtNum(v, decimals)}`);
 
-function TripleCells({ t, decimals, avg }: { t: Triple; decimals: number; avg?: number | null }) {
-  return (
-    <>
-      <td className={cn(td, 'text-ink-500 text-right')}>{fmtNum(t.std, decimals)}</td>
-      <td className={cn(td, 'text-ink-900 text-right font-semibold')}>{fmtNum(t.act, decimals)}</td>
-      <td className={cn(td, 'text-right font-medium', flagText[t.varFlag])}>{signed(t.var, decimals)}</td>
-      {avg !== undefined && <td className={cn(td, 'text-ink-500 text-right')}>{fmtNum(avg, decimals)}</td>}
-    </>
-  );
-}
-
-function ResultChip({ pct, text, flag }: { pct: number | null; text: string | null; flag: Flag }) {
-  if (pct === null && !text) return <span className="text-ink-400">—</span>;
-  return (
-    <span
-      className={cn('inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold', flagBg[flag])}
-    >
-      {pct !== null && <span className="tabular">{fmtPct(Math.abs(pct) * 100, 1)}</span>}
-      {text}
-    </span>
-  );
-}
-
 function Events({ n, bad }: { n: number; bad: boolean }) {
   return <span className={cn('font-medium', bad && n > 0 ? 'text-danger-600' : 'text-ink-500')}>{fmtNum(n)}</span>;
-}
-
-function GroupHead({ extra }: { extra?: string[] }) {
-  return (
-    <thead className="sticky top-0 z-[2]">
-      <tr>
-        <th className={cn(th, stickyCol, 'text-left')} rowSpan={2}>
-          Parameter
-        </th>
-        <th className={cn(th, 'text-left')} rowSpan={2}>
-          Unit
-        </th>
-        <th className={cn(th, 'border-l-line bg-canvas text-ink-700 border-l text-center')} colSpan={3}>
-          Today
-        </th>
-        <th className={cn(th, 'border-l-line bg-brand-50 text-brand-600 border-l text-center')} colSpan={4}>
-          Month to date
-        </th>
-        <th className={cn(th, 'border-l-line bg-canvas text-ink-700 border-l text-center')} colSpan={4}>
-          Up to date
-        </th>
-        <th className={cn(th, 'border-l-line border-l text-center')} colSpan={2}>
-          Events
-        </th>
-        <th className={cn(th, 'border-l-line border-l text-left')} rowSpan={2}>
-          UTD result
-        </th>
-        {extra?.map((e) => (
-          <th key={e} className={cn(th, 'border-l-line border-l text-right')} rowSpan={2}>
-            {e}
-          </th>
-        ))}
-      </tr>
-      <tr>
-        {['STD', 'ACT', 'VAR', 'STD', 'ACT', 'VAR', 'Avg/day', 'STD', 'ACT', 'VAR', 'Avg/day', 'MTD', 'UTD'].map(
-          (h, i) => (
-            <th key={i} className={cn(th, 'text-right', [0, 3, 7, 11].includes(i) && 'border-l-line border-l')}>
-              {h}
-            </th>
-          ),
-        )}
-      </tr>
-    </thead>
-  );
-}
-
-/* ------------------------------------------------------------------ key parameters & chemicals */
-export function ParamTable({ rows, chemicals }: { rows: ParamRow[] | ChemicalRow[]; chemicals?: boolean }) {
-  return (
-    <MisTableShell minWidth={chemicals ? 1320 : 1180}>
-      <GroupHead extra={chemicals ? ['Received', 'Balance'] : undefined} />
-      <tbody>
-        {rows.map((r, i) => {
-          const c = r as ChemicalRow;
-          return (
-            <motion.tr
-              key={r.code}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: Math.min(i, 15) * 0.025 }}
-              className="group"
-            >
-              <td className={cn(td, stickyCol, 'text-ink-900 group-hover:bg-canvas font-medium')}>{r.name}</td>
-              <td className={cn(td, 'text-ink-500')}>{r.unit}</td>
-              <TripleCells t={r.today!} decimals={r.decimals} />
-              <TripleCells t={r.mtd!} decimals={r.decimals} avg={r.avgPerDay.mtd} />
-              <TripleCells t={r.utd!} decimals={r.decimals} avg={r.avgPerDay.utd} />
-              <td className={cn(td, 'text-right')}>
-                <Events n={r.events!.mtd} bad={r.events!.flag === 'bad'} />
-              </td>
-              <td className={cn(td, 'text-right')}>
-                <Events n={r.events!.utd} bad={r.events!.flag === 'bad'} />
-              </td>
-              <td className={cn(td)}>
-                {r.utdResult && (
-                  <ResultChip
-                    pct={r.utdResult.pct ?? null}
-                    text={r.utdResult.text ?? null}
-                    flag={r.utdResult.flag ?? 'neutral'}
-                  />
-                )}
-              </td>
-              {chemicals && (
-                <>
-                  <td className={cn(td, 'text-ink-700 text-right')}>{fmtNum(c.received, r.decimals)}</td>
-                  <td
-                    className={cn(
-                      td,
-                      'text-right font-semibold',
-                      c.balanceFlag === 'bad' ? 'text-danger-600' : 'text-ink-900',
-                    )}
-                  >
-                    {fmtNum(c.balance, r.decimals)}
-                  </td>
-                </>
-              )}
-            </motion.tr>
-          );
-        })}
-      </tbody>
-    </MisTableShell>
-  );
 }
 
 /* ------------------------------------------------------------------ lab */
@@ -451,154 +322,6 @@ export function SafetyTable({ safety }: { safety: MisReport['safety'] }) {
   );
 }
 
-/* ------------------------------------------------------------------ v1.1 ParamTable with dual standards + TripleCluster */
-
-function ResultCluster({
-  row,
-  kind,
-  results,
-}: {
-  row: ParamRow;
-  kind: StandardKind;
-  results: ResultMode;
-}) {
-  const k = perKindOf(row, kind);
-  const items = [
-    { label: 'TODAY', line: k.results.today },
-    { label: 'MTD', line: k.results.mtd },
-    { label: 'UTD', line: k.results.utd },
-  ] as const;
-  return (
-    <div className="space-y-1">
-      {items.map(({ label, line }) => {
-        if (line.pct === null && line.qty === null) return null;
-        return (
-          <div key={label} className={cn('inline-flex items-baseline gap-2 text-[11px]', flagText[line.flag])}>
-            <span className="text-ink-400 w-9">{label}</span>
-            <span className="font-semibold">{formatResult(line, row.unit, row.decimals, results)}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/** v1.1 parameter table with optional dual-standard columns and 3-result cluster. */
-export function ParamTableV11({
-  rows,
-  standards,
-  results,
-  chemicals,
-}: {
-  rows: ParamRow[];
-  standards: StandardsShown;
-  results: ResultMode;
-  chemicals?: boolean;
-}) {
-  const kinds = visibleKinds(standards);
-  const kindLabel: Record<StandardKind, string> = { bidding: 'B', actual: 'A' };
-
-  return (
-    <MisTableShell minWidth={chemicals ? 1400 : 1200}>
-      <thead className="sticky top-0 z-[2]">
-        <tr>
-          <th className={cn(th, stickyCol, 'text-left')} rowSpan={2}>Parameter</th>
-          <th className={cn(th, 'text-left')} rowSpan={2}>Unit</th>
-          {kinds.map((kind) => (
-            <>
-              <th
-                key={`${kind}-today`}
-                className={cn(th, 'border-l-line border-l text-center')}
-                colSpan={3}
-              >
-                Today {kinds.length > 1 ? `(${kindLabel[kind]})` : ''}
-              </th>
-              <th
-                key={`${kind}-mtd`}
-                className={cn(th, 'border-l-line bg-brand-50 text-brand-600 border-l text-center')}
-                colSpan={4}
-              >
-                MTD {kinds.length > 1 ? `(${kindLabel[kind]})` : ''}
-              </th>
-              <th
-                key={`${kind}-utd`}
-                className={cn(th, 'border-l-line border-l text-center')}
-                colSpan={4}
-              >
-                UTD {kinds.length > 1 ? `(${kindLabel[kind]})` : ''}
-              </th>
-            </>
-          ))}
-          <th className={cn(th, 'border-l-line border-l text-center')} colSpan={2}>Events</th>
-          <th className={cn(th, 'border-l-line border-l text-left')} rowSpan={2}>Results</th>
-          {chemicals && <th className={cn(th, 'border-l-line border-l text-right')} rowSpan={2}>Received</th>}
-          {chemicals && <th className={cn(th, 'border-l-line border-l text-right')} rowSpan={2}>Balance</th>}
-        </tr>
-        <tr>
-          {kinds.map((kind) =>
-            ['STD', 'ACT', 'VAR', 'STD', 'ACT', 'VAR', 'Avg/d', 'STD', 'ACT', 'VAR', 'Avg/d'].map((h, i) => (
-              <th
-                key={`${kind}-${i}`}
-                className={cn(th, 'text-right', [0, 3, 7].includes(i) && 'border-l-line border-l')}
-              >
-                {h}
-              </th>
-            )),
-          )}
-          <th className={cn(th, 'border-l-line border-l text-right')}>MTD</th>
-          <th className={cn(th, 'text-right')}>UTD</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r, i) => {
-          const c = r as ChemicalRow;
-          return (
-            <motion.tr
-              key={r.code}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: Math.min(i, 15) * 0.025 }}
-              className="group"
-            >
-              <td className={cn(td, stickyCol, 'text-ink-900 group-hover:bg-canvas font-medium')}>{r.name}</td>
-              <td className={cn(td, 'text-ink-500')}>{r.unit}</td>
-              {kinds.map((kind) => {
-                const k = perKindOf(r, kind);
-                return (
-                  <>
-                    <TripleCells key={`${kind}-today`} t={k.today} decimals={r.decimals} />
-                    <TripleCells key={`${kind}-mtd`} t={k.mtd} decimals={r.decimals} avg={r.avgPerDay.mtd} />
-                    <TripleCells key={`${kind}-utd`} t={k.utd} decimals={r.decimals} avg={r.avgPerDay.utd} />
-                  </>
-                );
-              })}
-              <td className={cn(td, 'text-right')}>
-                <Events n={(perKindOf(r, kinds[0] ?? 'actual').events).mtd} bad={r.events?.flag === 'bad'} />
-              </td>
-              <td className={cn(td, 'text-right')}>
-                <Events n={(perKindOf(r, kinds[0] ?? 'actual').events).utd} bad={r.events?.flag === 'bad'} />
-              </td>
-              <td className={td}>
-                {kinds.map((kind) => (
-                  <ResultCluster key={kind} row={r} kind={kind} results={results} />
-                ))}
-              </td>
-              {chemicals && (
-                <>
-                  <td className={cn(td, 'text-ink-700 text-right')}>{fmtNum(c.received, r.decimals)}</td>
-                  <td className={cn(td, 'text-right font-semibold', c.balanceFlag === 'bad' ? 'text-danger-600' : 'text-ink-900')}>
-                    {fmtNum(c.balance, r.decimals)}
-                  </td>
-                </>
-              )}
-            </motion.tr>
-          );
-        })}
-      </tbody>
-    </MisTableShell>
-  );
-}
-
 /* ------------------------------------------------------------------ maintenance tab (v1.1) */
 
 function StatTile({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
@@ -786,5 +509,55 @@ export function MaintenanceTabSection({
         </div>
       )}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ simple MIS table */
+
+export type MisPeriod = 'today' | 'mtd' | 'utd';
+
+/**
+ * The plain MIS table for one chosen period: Parameter · Unit · Standard · Actual · Variance (+ Balance for chemicals).
+ * `kind` picks the Bidding or Actual standard.
+ */
+export function SimpleParamTable({ rows, period, kind, chemicals }: { rows: ParamRow[]; period: MisPeriod; kind: StandardKind; chemicals?: boolean }) {
+  return (
+    <MisTableShell minWidth={560}>
+      <thead>
+        <tr>
+          <th className={cn(th, stickyCol, 'text-left')}>Parameter</th>
+          <th className={cn(th, 'text-left')}>Unit</th>
+          <th className={cn(th, 'text-right')}>Standard</th>
+          <th className={cn(th, 'text-right')}>Actual</th>
+          <th className={cn(th, 'text-right')}>Variance</th>
+          {chemicals && <th className={cn(th, 'text-right')}>Balance</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => {
+          const t = perKindOf(r, kind)[period];
+          const c = r as ChemicalRow;
+          return (
+            <tr key={r.code} className="group">
+              <td className={cn(td, stickyCol, 'text-ink-900 group-hover:bg-canvas font-medium')}>{r.name}</td>
+              <td className={cn(td, 'text-ink-500')}>{r.unit}</td>
+              <td className={cn(td, 'text-ink-500 text-right')}>{fmtNum(t.std, r.decimals)}</td>
+              <td className={cn(td, 'text-ink-900 text-right font-semibold')}>{fmtNum(t.act, r.decimals)}</td>
+              <td className={cn(td, 'text-right font-medium', flagText[t.varFlag])}>{signed(t.var, r.decimals)}</td>
+              {chemicals && (
+                <td className={cn(td, 'text-right font-semibold', c.balanceFlag === 'bad' ? 'text-danger-600' : 'text-ink-900')}>
+                  {fmtNum(c.balance, r.decimals)}
+                </td>
+              )}
+            </tr>
+          );
+        })}
+        {rows.length === 0 && (
+          <tr>
+            <td className={cn(td, 'text-ink-400 text-center')} colSpan={chemicals ? 6 : 5}>Nothing to show.</td>
+          </tr>
+        )}
+      </tbody>
+    </MisTableShell>
   );
 }
