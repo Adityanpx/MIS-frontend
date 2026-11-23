@@ -58,7 +58,7 @@ export function ValueState({ field, value }: { field: FormField; value: number |
 }
 
 const boxBase =
-  'h-11 w-full rounded-control border bg-canvas px-3.5 text-[15px] font-semibold text-ink-900 tabular transition-[border-color,box-shadow,background] duration-150 placeholder:font-normal placeholder:text-ink-300 hover:border-ink-300 focus:border-brand-500 focus:bg-surface focus:outline-none focus:ring-4 focus:ring-brand-500/12';
+  'h-10 w-full rounded-control border bg-canvas px-3 text-sm font-semibold text-ink-900 tabular transition-[border-color,box-shadow,background] duration-150 placeholder:font-normal placeholder:text-ink-300 hover:border-ink-300 focus:border-brand-500 focus:bg-surface focus:outline-none focus:ring-4 focus:ring-brand-500/12';
 
 /** The number / text box. Numbers right-aligned, Indian commas accepted ("1,30,462"). */
 export const ValueBox = forwardRef<
@@ -82,7 +82,7 @@ export const ValueBox = forwardRef<
     return (
       <div
         className={cn(
-          'rounded-control border-line bg-canvas/60 text-ink-900 tabular flex h-11 items-center border border-dashed px-3.5 text-[15px] font-semibold',
+          'rounded-control border-line bg-canvas/60 text-ink-900 tabular flex h-10 items-center border border-dashed px-3 text-sm font-semibold',
           numeric ? 'justify-end' : 'justify-start text-sm font-medium',
           warn && 'text-warning-600',
           className,
@@ -184,21 +184,21 @@ export function FieldRow({
     const v = calcValue ?? null;
     return (
       <div className="min-w-0" id={`f-${field.parameterId}`}>
-        <div className="mb-1.5 flex items-center justify-between gap-2">
+        <div className="mb-1 flex items-center justify-between gap-2">
           <span className="text-ink-700 truncate text-[13px] font-medium">{label ?? field.name}</span>
           <UnitChip unit={field.unit} />
         </div>
         <Tooltip content={<span>Calculated: {field.formula}</span>}>
-          <div className="rounded-control border-brand-200 bg-brand-50/60 flex h-11 items-center justify-between gap-2 border border-dashed px-3.5">
+          <div className="rounded-control border-brand-200 bg-brand-50/60 flex h-10 items-center justify-between gap-2 border border-dashed px-3">
             <span className="text-brand-500 inline-flex items-center gap-1 text-[11px] font-semibold tracking-wide uppercase">
               <Calculator className="size-3.5" /> Auto
             </span>
-            <span className="text-ink-900 tabular text-[15px] font-semibold">
+            <span className="text-ink-900 tabular text-sm font-semibold">
               {v === null ? <span className="text-ink-300 font-normal">{DASH}</span> : fmtNum(v, field.decimals)}
             </span>
           </div>
         </Tooltip>
-        <div className="mt-1 flex min-h-4 items-center justify-between gap-2">
+        <div className="mt-0.5 flex min-h-3.5 items-center justify-between gap-2">
           <span className="text-ink-400 truncate text-[11px]">{hint ?? field.formula}</span>
           <ValueState field={field} value={v} />
         </div>
@@ -208,7 +208,7 @@ export function FieldRow({
 
   return (
     <div className="min-w-0" id={`f-${field.parameterId}`}>
-      <div className="mb-1.5 flex items-center justify-between gap-2">
+      <div className="mb-1 flex items-center justify-between gap-2">
         <label className="text-ink-700 truncate text-[13px] font-medium" htmlFor={`in-${field.parameterId}`}>
           {label ?? field.name}
           {field.mandatory && !isText(field) && <span className="text-danger-500 ml-0.5">*</span>}
@@ -236,7 +236,7 @@ export function FieldRow({
       )}
       <FieldError message={error} />
       {!error && (
-        <div className="mt-1 flex min-h-4 items-center justify-between gap-2">
+        <div className="mt-0.5 flex min-h-3.5 items-center justify-between gap-2">
           <span className="text-ink-400 truncate text-[11px]">
             {changed ? (
               <span className="text-brand-500 font-medium">

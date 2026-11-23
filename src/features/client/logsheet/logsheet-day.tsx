@@ -111,29 +111,37 @@ function Banner({
   );
 }
 
-/** Right column: progress, save state, block checklist, quick look and the submit button. */
+/** Bottom panel: progress, save state, block chips, warnings and the submit button. */
 function EntrySide({ form, ed, onSubmit }: { form: LogsheetForm; ed: LogsheetEditor; onSubmit: () => void }) {
   const mod = useModKey();
   const pct = ed.progress.total ? Math.round((ed.progress.filled / ed.progress.total) * 100) : 100;
   const warnings = ed.fullChecks.warnings.length;
   return (
-    <Card className="space-y-5">
-      <div className="flex items-center gap-4">
+    <Card padded={false} className="space-y-4 p-4 sm:p-5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <div className="relative grid place-items-center">
-          <Ring value={ed.progress.filled} max={ed.progress.total} size={84} stroke={8} />
-          <span className="text-ink-900 tabular absolute text-lg font-bold">{pct}%</span>
+          <Ring value={ed.progress.filled} max={ed.progress.total} size={56} stroke={6} />
+          <span className="text-ink-900 tabular absolute text-[13px] font-bold">{pct}%</span>
         </div>
-        <div className="min-w-0">
-          <p className="text-ink-900 text-base font-semibold">Today&apos;s entry</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-ink-900 text-[15px] font-semibold">Today&apos;s entry</p>
           <p className="text-ink-500 text-xs">
             {ed.progress.filled} of {ed.progress.total} required values
           </p>
-          <div className="mt-1.5">
+          <div className="mt-1">
             <SaveIndicator ed={ed} />
           </div>
         </div>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <Button variant="secondary" onClick={() => void ed.saveNow()} disabled={ed.saveState === 'saving'}>
+            <Save /> Save draft <Kbd className="ml-1 hidden sm:inline-flex">{mod} S</Kbd>
+          </Button>
+          <Button size="lg" onClick={onSubmit} className="flex-1 sm:flex-none">
+            <Send /> Review &amp; submit
+          </Button>
+        </div>
       </div>
-      <ul className="space-y-1">
+      <ul className="flex flex-wrap gap-2">
         {ed.progress.blocks.map((b) => {
           const Icon = blockIcon(b.block);
           const done = b.total === 0 || b.filled === b.total;
@@ -143,16 +151,19 @@ function EntrySide({ form, ed, onSubmit }: { form: LogsheetForm; ed: LogsheetEdi
               <button
                 type="button"
                 onClick={() => document.getElementById(`block-${b.block}`)?.scrollIntoView({ behavior: 'smooth' })}
-                className="hover:bg-canvas flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors"
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                  bad
+                    ? 'border-danger-100 bg-danger-50 text-danger-600'
+                    : done
+                      ? 'border-success-100 bg-success-50 text-success-600'
+                      : 'border-line text-ink-700 hover:bg-canvas',
+                )}
               >
-                <Icon className="text-ink-400 size-4 shrink-0" />
-                <span className="text-ink-700 min-w-0 flex-1 truncate text-[13px] font-medium">{b.title}</span>
-                {bad ? (
-                  <span className="bg-danger-500 size-2 rounded-full" />
-                ) : done ? (
-                  <CheckCircle2 className="text-success-600 size-4" />
-                ) : (
-                  <span className="text-ink-500 tabular text-xs">
+                {done && !bad ? <CheckCircle2 className="size-3.5" /> : <Icon className="size-3.5" />}
+                {b.title}
+                {!done && !bad && (
+                  <span className="text-ink-500 tabular">
                     {b.filled}/{b.total}
                   </span>
                 )}
@@ -165,7 +176,7 @@ function EntrySide({ form, ed, onSubmit }: { form: LogsheetForm; ed: LogsheetEdi
         <button
           type="button"
           onClick={() => focusField(ed.fullChecks.warnings[0]!.parameterId)}
-          className="border-warning-100 bg-warning-50 flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left"
+          className="border-warning-100 bg-warning-50 flex w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-left"
         >
           <TriangleAlert className="text-warning-500 size-4 shrink-0" />
           <span className="text-warning-600 text-[13px] font-medium">
@@ -173,19 +184,6 @@ function EntrySide({ form, ed, onSubmit }: { form: LogsheetForm; ed: LogsheetEdi
           </span>
         </button>
       )}
-      <div className="space-y-2">
-        <Button className="w-full" size="lg" onClick={onSubmit}>
-          <Send /> Review &amp; submit
-        </Button>
-        <Button
-          variant="ghost"
-          className="w-full"
-          onClick={() => void ed.saveNow()}
-          disabled={ed.saveState === 'saving'}
-        >
-          <Save /> Save draft <Kbd className="ml-1">{mod} S</Kbd>
-        </Button>
-      </div>
     </Card>
   );
 }
@@ -210,9 +208,9 @@ function AtAGlance({ form, ed }: { form: LogsheetForm; ed: LogsheetEditor }) {
     },
   ];
   return (
-    <Card>
-      <p className="text-ink-900 mb-3 text-sm font-semibold">At a glance</p>
-      <dl className="space-y-2.5">
+    <Card padded={false} className="p-4 sm:p-5">
+      <p className="text-ink-900 mb-3 text-[15px] font-semibold">At a glance</p>
+      <dl className="space-y-2">
         {rows.map((r) => (
           <div key={r.label} className="flex items-center justify-between gap-3 text-[13px]">
             <dt className="text-ink-500">{r.label}</dt>
@@ -245,7 +243,8 @@ function SubmittedSide({
   const l = form.logsheet!;
   const canRequest = can('logsheet.requestCorrection') && !form.canCorrect;
   return (
-    <Card className="space-y-5">
+    <Card padded={false} className="grid gap-5 p-4 sm:p-5 lg:grid-cols-2">
+      <div className="space-y-4">
       <div className="flex items-center gap-3">
         <span className="bg-success-50 text-success-600 grid size-11 place-items-center rounded-2xl">
           <CheckCircle2 className="size-5" />
@@ -274,8 +273,9 @@ function SubmittedSide({
         </div>
         {l.remarks && <p className="text-ink-700 border-line border-t pt-2 italic">&quot;{l.remarks}&quot;</p>}
       </dl>
+      </div>
       {ed.mode === 'view' && (
-        <div className="space-y-2">
+        <div className="space-y-2 self-center">
           {form.canCorrect && (
             <Button className="w-full" onClick={() => ed.setMode('correct')}>
               <PencilLine /> Correct values
@@ -433,62 +433,61 @@ export function LogsheetDay({ date }: { date: string }) {
   return (
     <>
       {header}
-      <div
-        className={cn(
-          'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]',
-          ed.mode === 'entry' && 'pb-24 lg:pb-0',
+      <div className="space-y-4">
+        {readOnly && ed.mode === 'view' && !submitted && (
+          <Banner tone="warning" icon={<Lock />} title="The account is read-only">
+            Logsheets can be viewed but not changed until the account is active again.
+          </Banner>
         )}
-      >
-        <div className="min-w-0 space-y-6">
-          {readOnly && ed.mode === 'view' && !submitted && (
-            <Banner tone="warning" icon={<Lock />} title="The account is read-only">
-              Logsheets can be viewed but not changed until the account is active again.
-            </Banner>
-          )}
-          {ed.lock.kind === 'other' && (
-            <Banner
-              tone="warning"
-              icon={<Lock />}
-              title={`${ed.lock.byName ?? 'Another user'} is editing this logsheet`}
-              actions={
+        {ed.lock.kind === 'other' && (
+          <Banner
+            tone="warning"
+            icon={<Lock />}
+            title={`${ed.lock.byName ?? 'Another user'} is editing this logsheet`}
+            actions={
+              <Button size="sm" variant="secondary" onClick={() => void ed.reload(false)}>
+                <RefreshCw /> Check again
+              </Button>
+            }
+          >
+            {ed.lock.until ? `Their edit lock ends at ${fmtDateTime(ed.lock.until).split(' ').pop()}. ` : ''}
+            You can view the values; editing opens when they finish.
+          </Banner>
+        )}
+        {ed.conflict && (
+          <Banner
+            tone="danger"
+            icon={<AlertTriangle />}
+            title="This logsheet changed somewhere else"
+            actions={
+              <>
                 <Button size="sm" variant="secondary" onClick={() => void ed.reload(false)}>
-                  <RefreshCw /> Check again
+                  Discard mine
                 </Button>
-              }
-            >
-              {ed.lock.until ? `Their edit lock ends at ${fmtDateTime(ed.lock.until).split(' ').pop()}. ` : ''}
-              You can view the values; editing opens when they finish.
-            </Banner>
-          )}
-          {ed.conflict && (
-            <Banner
-              tone="danger"
-              icon={<AlertTriangle />}
-              title="This logsheet changed somewhere else"
-              actions={
-                <>
-                  <Button size="sm" variant="secondary" onClick={() => void ed.reload(false)}>
-                    Discard mine
-                  </Button>
-                  <Button size="sm" onClick={() => void ed.reload(true)}>
-                    Reload, keep my values
-                  </Button>
-                </>
-              }
-            >
-              Another tab or user saved a newer version. Reload to continue.
-            </Banner>
-          )}
+                <Button size="sm" onClick={() => void ed.reload(true)}>
+                  Reload, keep my values
+                </Button>
+              </>
+            }
+          >
+            Another tab or user saved a newer version. Reload to continue.
+          </Banner>
+        )}
+
+        <div className="grid items-start gap-4 xl:grid-cols-2">
           {form.blocks.map((b) => (
             <LogsheetBlock key={b.block} form={form} block={b} ed={ed} prog={progressByBlock.get(b.block)} />
           ))}
-          <AnimatePresence>
-            {(ed.mode === 'correct' || ed.mode === 'request') && (
-              <CorrectionBar ed={ed} form={form} onDone={(k) => void afterChange(k)} />
-            )}
-          </AnimatePresence>
         </div>
-        <aside className="space-y-6 lg:sticky lg:top-[96px]">
+
+        <AnimatePresence>
+          {(ed.mode === 'correct' || ed.mode === 'request') && (
+            <CorrectionBar ed={ed} form={form} onDone={(k) => void afterChange(k)} />
+          )}
+        </AnimatePresence>
+
+        {/* the entry summary, submit and "at a glance" live at the bottom, after the values */}
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           {submitted ? (
             <SubmittedSide
               form={form}
@@ -500,28 +499,12 @@ export function LogsheetDay({ date }: { date: string }) {
             />
           ) : ed.mode === 'entry' ? (
             <EntrySide form={form} ed={ed} onSubmit={() => setSubmitOpen(true)} />
-          ) : null}
+          ) : (
+            <div />
+          )}
           <AtAGlance form={form} ed={ed} />
-        </aside>
-      </div>
-
-      {/* phones: progress + submit always reachable */}
-      {ed.mode === 'entry' && (
-        <div className="border-line bg-surface/95 shadow-float fixed inset-x-3 bottom-3 z-30 flex items-center gap-3 rounded-2xl border p-2.5 pl-4 backdrop-blur lg:hidden">
-          <div className="relative grid place-items-center">
-            <Ring value={ed.progress.filled} max={ed.progress.total} size={34} stroke={4} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-ink-900 text-[13px] font-semibold">
-              {ed.progress.filled}/{ed.progress.total} values
-            </p>
-            <SaveIndicator ed={ed} />
-          </div>
-          <Button onClick={() => setSubmitOpen(true)}>
-            <Send /> Submit
-          </Button>
         </div>
-      )}
+      </div>
 
       {ed.mode === 'entry' && (
         <SubmitDialog

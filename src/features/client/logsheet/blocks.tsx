@@ -71,47 +71,37 @@ export function Ring({
   );
 }
 
+/** Left stripe colour per block (cycles), like the coloured sections of a simple entry form. */
+const ACCENT = ['border-l-brand-500', 'border-l-success-500', 'border-l-yellow-500', 'border-l-purple-500'] as const;
+
 function BlockShell({
   block,
   prog,
   children,
-  aside,
+  wide,
 }: {
   block: FormBlock;
   prog?: BlockProgress;
   children: ReactNode;
-  aside?: ReactNode;
+  /** tables and the cash line need the full row; short blocks sit two per row */
+  wide?: boolean;
 }) {
-  const Icon = blockIcon(block.block);
+  const done = !!prog && prog.total > 0 && prog.filled >= prog.total;
   return (
     <motion.section
       id={`block-${block.block}`}
-      className="scroll-mt-28"
-      initial={{ opacity: 0, y: 12 }}
+      className={cn('scroll-mt-28', wide && 'xl:col-span-2')}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: Math.min(block.block, 8) * 0.04 }}
+      transition={{ duration: 0.3, delay: Math.min(block.block, 8) * 0.03 }}
     >
-      <Card>
-        <div className="mb-5 flex items-center gap-3">
-          <span className="bg-brand-50 text-brand-500 grid size-10 shrink-0 place-items-center rounded-xl [&_svg]:size-5">
-            <Icon />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-ink-900 text-[17px] font-semibold">{block.title}</h2>
-            {prog && prog.total > 0 && (
-              <p className="text-ink-500 text-xs">
-                {prog.filled} of {prog.total} required values
-              </p>
-            )}
-          </div>
-          {aside}
+      <Card padded={false} className={cn('border-l-4 p-4', ACCENT[(block.block - 1) % ACCENT.length])}>
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-ink-900 text-[15px] font-semibold">{block.title}</h2>
           {prog && prog.total > 0 && (
-            <div className="relative grid place-items-center">
-              <Ring value={prog.filled} max={prog.total} />
-              <span className="text-ink-700 tabular absolute text-[10px] font-semibold">
-                {Math.round((prog.filled / prog.total) * 100)}
-              </span>
-            </div>
+            <span className={cn('tabular text-xs font-medium', done ? 'text-success-600' : 'text-ink-500')}>
+              {prog.filled}/{prog.total}
+            </span>
           )}
         </div>
         {children}
@@ -156,11 +146,11 @@ function TextRow({ ed, f, original }: Omit<Common, 'form'> & { f: FormField }) {
   );
 }
 
-function Grid({ fields, ...c }: Common & { fields: FormField[] }) {
+function Grid({ fields, wide, ...c }: Common & { fields: FormField[]; wide?: boolean }) {
   const typed = fields.filter((f) => !isText(f));
   const text = fields.filter(isText);
   return (
-    <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className={cn('grid gap-x-3 gap-y-3 sm:grid-cols-2', wide && 'lg:grid-cols-4')}>
       {typed.map((f) => (
         <FieldRow
           key={f.parameterId}
@@ -213,7 +203,7 @@ function StockTable({ fields, ...c }: Common & { fields: FormField[] }) {
   return (
     <>
       <div className="scrollbar-thin -mx-1 overflow-x-auto px-1">
-        <table className="w-full min-w-[640px] border-separate border-spacing-y-1.5">
+        <table className="w-full min-w-[640px] border-separate border-spacing-y-1">
           <thead>
             <tr className="text-left">
               <th className={th}>Item</th>
@@ -231,16 +221,16 @@ function StockTable({ fields, ...c }: Common & { fields: FormField[] }) {
               return (
                 <tr key={i.code} className="align-top">
                   <td className="py-1 pr-3">
-                    <p className="text-ink-900 pt-2.5 text-sm font-semibold">{i.name}</p>
+                    <p className="text-ink-900 pt-2 text-sm font-semibold">{i.name}</p>
                     <p className="text-ink-400 text-[11px] whitespace-nowrap">
                       {cf?.unit}
                       {std !== null && ` · std ${fmtNum(std)}/day`}
                     </p>
                   </td>
-                  <td className="text-ink-500 tabular py-1 pt-3.5 text-right text-sm">{qty(p.opening)}</td>
+                  <td className="text-ink-500 tabular py-1 pt-3 text-right text-sm">{qty(p.opening)}</td>
                   <td className="py-1 pl-4">{box(cf)}</td>
                   <td className="py-1 pl-3">{box(byCode.get(i.receivedCode))}</td>
-                  <td className="py-1 pt-2 text-right">
+                  <td className="py-1 pt-1 text-right">
                     <span
                       className={cn(
                         'tabular inline-flex h-8 items-center rounded-lg px-2.5 text-sm font-semibold',
@@ -268,7 +258,7 @@ function StockTable({ fields, ...c }: Common & { fields: FormField[] }) {
       </div>
       {rest().length > 0 && (
         <div className="border-line mt-4 border-t border-dashed pt-4">
-          <Grid fields={rest()} {...c} />
+          <Grid fields={rest()} wide {...c} />
         </div>
       )}
     </>
@@ -296,7 +286,7 @@ function StaffTable({ fields, ...c }: Common & { fields: FormField[] }) {
   };
   return (
     <div className="scrollbar-thin -mx-1 overflow-x-auto px-1">
-      <table className="w-full min-w-[620px] border-separate border-spacing-y-1.5">
+      <table className="w-full min-w-[620px] border-separate border-spacing-y-1">
         <thead>
           <tr className="text-left">
             <th className={th}>Category</th>
@@ -315,14 +305,14 @@ function StaffTable({ fields, ...c }: Common & { fields: FormField[] }) {
             return (
               <tr key={r.code} className="align-top">
                 <td className="py-1 pr-3">
-                  <p className="text-ink-900 pt-2.5 text-sm font-semibold">{r.name}</p>
+                  <p className="text-ink-900 pt-2 text-sm font-semibold">{r.name}</p>
                   {err && r.over && <p className="text-danger-600 text-[11px] font-medium">Exceeds strength</p>}
                 </td>
-                <td className="text-ink-700 tabular py-1 pt-3.5 text-right text-sm font-semibold">{r.strength}</td>
+                <td className="text-ink-700 tabular py-1 pt-3 text-right text-sm font-semibold">{r.strength}</td>
                 <td className="w-[17%] py-1 pl-4">{cell(r.codes.vacant)}</td>
                 <td className="w-[17%] py-1 pl-3">{cell(r.codes.present)}</td>
                 <td className="w-[17%] py-1 pl-3">{cell(r.codes.leave)}</td>
-                <td className="py-1 pt-2 text-right">
+                <td className="py-1 pt-1 text-right">
                   <span
                     className={cn(
                       'tabular inline-flex h-8 min-w-10 items-center justify-center rounded-lg px-2.5 text-sm font-semibold',
@@ -352,14 +342,14 @@ function CashPanel({ fields, ...c }: Common & { fields: FormField[] }) {
   const rec = fields.find((f) => f.linkRole === 'cash_received');
   const other = fields.filter((f) => f !== exp && f !== rec);
   const Op = ({ children }: { children: ReactNode }) => (
-    <span className="text-ink-300 hidden pt-9 text-xl font-light sm:block">{children}</span>
+    <span className="text-ink-300 hidden pt-8 text-xl font-light sm:block">{children}</span>
   );
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        <div className="sm:w-40">
+        <div className="sm:w-36">
           <p className="text-ink-700 mb-1.5 text-[13px] font-medium">In hand yesterday</p>
-          <div className="rounded-control bg-muted-bg text-ink-700 tabular flex h-11 items-center justify-end px-3.5 text-[15px] font-semibold">
+          <div className="rounded-control bg-muted-bg text-ink-700 tabular flex h-10 items-center justify-end px-3 text-sm font-semibold">
             {fmtMoney0(p.opening)}
           </div>
         </div>
@@ -397,11 +387,11 @@ function CashPanel({ fields, ...c }: Common & { fields: FormField[] }) {
           </div>
         )}
         <Op>=</Op>
-        <div className="sm:w-40">
+        <div className="sm:w-36">
           <p className="text-ink-700 mb-1.5 text-[13px] font-medium">In hand today</p>
           <div
             className={cn(
-              'rounded-control tabular flex h-11 items-center justify-end px-3.5 text-[15px] font-bold',
+              'rounded-control tabular flex h-10 items-center justify-end px-3 text-sm font-bold',
               p.closing !== null && p.closing < 0 ? 'bg-danger-50 text-danger-600' : 'bg-success-50 text-success-600',
             )}
           >
@@ -409,7 +399,7 @@ function CashPanel({ fields, ...c }: Common & { fields: FormField[] }) {
           </div>
         </div>
       </div>
-      {other.length > 0 && <Grid fields={other} {...c} />}
+      {other.length > 0 && <Grid fields={other} wide {...c} />}
     </div>
   );
 }
@@ -430,12 +420,16 @@ export function LogsheetBlock({
   const c = { form, ed, original };
   const roles = new Set(block.fields.map((f) => f.linkRole));
   let body: ReactNode;
+  let wide = true;
   if (roles.has('consumed')) body = <StockTable fields={block.fields} {...c} />;
   else if (roles.has('present') || roles.has('vacant')) body = <StaffTable fields={block.fields} {...c} />;
   else if (roles.has('expense')) body = <CashPanel fields={block.fields} {...c} />;
-  else body = <Grid fields={block.fields} {...c} />;
+  else {
+    body = <Grid fields={block.fields} {...c} />;
+    wide = false;
+  }
   return (
-    <BlockShell block={block} prog={prog}>
+    <BlockShell block={block} prog={prog} wide={wide}>
       {body}
     </BlockShell>
   );
