@@ -71,33 +71,19 @@ export function Ring({
   );
 }
 
-/** Left stripe colour per block (cycles), like the coloured sections of a simple entry form. */
-const ACCENT = ['border-l-brand-500', 'border-l-success-500', 'border-l-yellow-500', 'border-l-purple-500'] as const;
-
-function BlockShell({
-  block,
-  prog,
-  children,
-  wide,
-}: {
-  block: FormBlock;
-  prog?: BlockProgress;
-  children: ReactNode;
-  /** tables and the cash line need the full row; short blocks sit two per row */
-  wide?: boolean;
-}) {
+function BlockShell({ block, prog, children }: { block: FormBlock; prog?: BlockProgress; children: ReactNode }) {
   const done = !!prog && prog.total > 0 && prog.filled >= prog.total;
   return (
     <motion.section
       id={`block-${block.block}`}
-      className={cn('scroll-mt-28', wide && 'xl:col-span-2')}
+      className="mb-3 scroll-mt-28 break-inside-avoid"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: Math.min(block.block, 8) * 0.03 }}
     >
-      <Card padded={false} className={cn('border-l-4 p-4', ACCENT[(block.block - 1) % ACCENT.length])}>
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <h2 className="text-ink-900 text-[15px] font-semibold">{block.title}</h2>
+      <Card padded={false} className="rounded-md! p-3.5">
+        <div className="mb-2.5 flex items-baseline justify-between gap-3">
+          <h2 className="text-ink-900 text-sm font-semibold">{block.title}</h2>
           {prog && prog.total > 0 && (
             <span className={cn('tabular text-xs font-medium', done ? 'text-success-600' : 'text-ink-500')}>
               {prog.filled}/{prog.total}
@@ -146,11 +132,11 @@ function TextRow({ ed, f, original }: Omit<Common, 'form'> & { f: FormField }) {
   );
 }
 
-function Grid({ fields, wide, ...c }: Common & { fields: FormField[]; wide?: boolean }) {
+function Grid({ fields, ...c }: Common & { fields: FormField[] }) {
   const typed = fields.filter((f) => !isText(f));
   const text = fields.filter(isText);
   return (
-    <div className={cn('grid gap-x-3 gap-y-3 sm:grid-cols-2', wide && 'lg:grid-cols-4')}>
+    <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
       {typed.map((f) => (
         <FieldRow
           key={f.parameterId}
@@ -173,7 +159,7 @@ function Grid({ fields, wide, ...c }: Common & { fields: FormField[]; wide?: boo
 /** stock quantities: 2 decimals at most, no float noise */
 const qty = (v: number | null) => (v === null ? DASH : fmtNum(Math.round(v * 100) / 100));
 
-const th = 'pb-2 text-[11px] font-medium tracking-wider text-ink-400 uppercase';
+const th = 'pb-1 text-[11px] font-medium tracking-wider text-ink-400 uppercase';
 
 /** Chemicals & consumables: opening → consumed / received → closing preview per stock item (§13.7). */
 function StockTable({ fields, ...c }: Common & { fields: FormField[] }) {
@@ -203,13 +189,13 @@ function StockTable({ fields, ...c }: Common & { fields: FormField[] }) {
   return (
     <>
       <div className="scrollbar-thin -mx-1 overflow-x-auto px-1">
-        <table className="w-full min-w-[640px] border-separate border-spacing-y-1">
+        <table className="w-full border-separate border-spacing-y-1">
           <thead>
             <tr className="text-left">
               <th className={th}>Item</th>
               <th className={cn(th, 'text-right')}>Opening</th>
-              <th className={cn(th, 'w-[22%] pl-4')}>Consumed</th>
-              <th className={cn(th, 'w-[22%] pl-3')}>Received</th>
+              <th className={cn(th, 'w-[26%] pl-2')}>Consumed</th>
+              <th className={cn(th, 'w-[26%] pl-2')}>Received</th>
               <th className={cn(th, 'text-right')}>Closing</th>
             </tr>
           </thead>
@@ -228,8 +214,8 @@ function StockTable({ fields, ...c }: Common & { fields: FormField[] }) {
                     </p>
                   </td>
                   <td className="text-ink-500 tabular py-1 pt-3 text-right text-sm">{qty(p.opening)}</td>
-                  <td className="py-1 pl-4">{box(cf)}</td>
-                  <td className="py-1 pl-3">{box(byCode.get(i.receivedCode))}</td>
+                  <td className="py-1 pl-2">{box(cf)}</td>
+                  <td className="py-1 pl-2">{box(byCode.get(i.receivedCode))}</td>
                   <td className="py-1 pt-1 text-right">
                     <span
                       className={cn(
@@ -258,7 +244,7 @@ function StockTable({ fields, ...c }: Common & { fields: FormField[] }) {
       </div>
       {rest().length > 0 && (
         <div className="border-line mt-4 border-t border-dashed pt-4">
-          <Grid fields={rest()} wide {...c} />
+          <Grid fields={rest()} {...c} />
         </div>
       )}
     </>
@@ -286,14 +272,14 @@ function StaffTable({ fields, ...c }: Common & { fields: FormField[] }) {
   };
   return (
     <div className="scrollbar-thin -mx-1 overflow-x-auto px-1">
-      <table className="w-full min-w-[620px] border-separate border-spacing-y-1">
+      <table className="w-full border-separate border-spacing-y-1">
         <thead>
           <tr className="text-left">
             <th className={th}>Category</th>
             <th className={cn(th, 'text-right')}>Strength</th>
-            <th className={cn(th, 'pl-4')}>Vacant</th>
-            <th className={cn(th, 'pl-3')}>Present</th>
-            <th className={cn(th, 'pl-3')}>On leave</th>
+            <th className={cn(th, 'pl-2')}>Vacant</th>
+            <th className={cn(th, 'pl-2')}>Present</th>
+            <th className={cn(th, 'pl-2')}>On leave</th>
             <th className={cn(th, 'text-right')}>Absent</th>
           </tr>
         </thead>
@@ -309,9 +295,9 @@ function StaffTable({ fields, ...c }: Common & { fields: FormField[] }) {
                   {err && r.over && <p className="text-danger-600 text-[11px] font-medium">Exceeds strength</p>}
                 </td>
                 <td className="text-ink-700 tabular py-1 pt-3 text-right text-sm font-semibold">{r.strength}</td>
-                <td className="w-[17%] py-1 pl-4">{cell(r.codes.vacant)}</td>
-                <td className="w-[17%] py-1 pl-3">{cell(r.codes.present)}</td>
-                <td className="w-[17%] py-1 pl-3">{cell(r.codes.leave)}</td>
+                <td className="w-[22%] py-1 pl-2">{cell(r.codes.vacant)}</td>
+                <td className="w-[22%] py-1 pl-2">{cell(r.codes.present)}</td>
+                <td className="w-[22%] py-1 pl-2">{cell(r.codes.leave)}</td>
                 <td className="py-1 pt-1 text-right">
                   <span
                     className={cn(
@@ -341,54 +327,28 @@ function CashPanel({ fields, ...c }: Common & { fields: FormField[] }) {
   const exp = fields.find((f) => f.linkRole === 'expense');
   const rec = fields.find((f) => f.linkRole === 'cash_received');
   const other = fields.filter((f) => f !== exp && f !== rec);
-  const Op = ({ children }: { children: ReactNode }) => (
-    <span className="text-ink-300 hidden pt-8 text-xl font-light sm:block">{children}</span>
+  const field = (f: FormField, extra?: ReactNode) => (
+    <FieldRow
+      field={f}
+      raw={c.ed.raw[f.parameterId] ?? ''}
+      onChange={(v) => c.ed.setValue(f.parameterId, v)}
+      editable={c.ed.editable}
+      error={c.ed.errors[f.parameterId]}
+      original={inCorrection(c.ed) ? (c.original[f.parameterId] ?? '') : undefined}
+      extra={extra}
+    />
   );
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        <div className="sm:w-36">
-          <p className="text-ink-700 mb-1.5 text-[13px] font-medium">In hand yesterday</p>
+    <div className="space-y-3">
+      <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+        <div>
+          <p className="text-ink-700 mb-1 text-[13px] font-medium">In hand yesterday</p>
           <div className="rounded-control bg-muted-bg text-ink-700 tabular flex h-10 items-center justify-end px-3 text-sm font-semibold">
             {fmtMoney0(p.opening)}
           </div>
         </div>
-        <Op>−</Op>
-        {exp && (
-          <div className="flex-1">
-            <FieldRow
-              field={exp}
-              raw={c.ed.raw[exp.parameterId] ?? ''}
-              onChange={(v) => c.ed.setValue(exp.parameterId, v)}
-              editable={c.ed.editable}
-              error={c.ed.errors[exp.parameterId]}
-              original={inCorrection(c.ed) ? (c.original[exp.parameterId] ?? '') : undefined}
-              extra={
-                p.overLimit ? (
-                  <span className="text-warning-600 text-[11px] font-semibold">Above ₹{fmtNum(p.limit)} limit</span>
-                ) : p.limit !== null ? (
-                  <span className="text-ink-400 text-[11px]">Limit ₹{fmtNum(p.limit)}/day</span>
-                ) : null
-              }
-            />
-          </div>
-        )}
-        <Op>+</Op>
-        {rec && (
-          <div className="flex-1">
-            <FieldRow
-              field={rec}
-              raw={c.ed.raw[rec.parameterId] ?? ''}
-              onChange={(v) => c.ed.setValue(rec.parameterId, v)}
-              editable={c.ed.editable}
-              error={c.ed.errors[rec.parameterId]}
-              original={inCorrection(c.ed) ? (c.original[rec.parameterId] ?? '') : undefined}
-            />
-          </div>
-        )}
-        <Op>=</Op>
-        <div className="sm:w-36">
-          <p className="text-ink-700 mb-1.5 text-[13px] font-medium">In hand today</p>
+        <div>
+          <p className="text-ink-700 mb-1 text-[13px] font-medium">In hand today</p>
           <div
             className={cn(
               'rounded-control tabular flex h-10 items-center justify-end px-3 text-sm font-bold',
@@ -398,8 +358,18 @@ function CashPanel({ fields, ...c }: Common & { fields: FormField[] }) {
             {fmtMoney0(p.closing)}
           </div>
         </div>
+        {exp &&
+          field(
+            exp,
+            p.overLimit ? (
+              <span className="text-warning-600 text-[11px] font-semibold">Above ₹{fmtNum(p.limit)} limit</span>
+            ) : p.limit !== null ? (
+              <span className="text-ink-400 text-[11px]">Limit ₹{fmtNum(p.limit)}/day</span>
+            ) : null,
+          )}
+        {rec && field(rec)}
       </div>
-      {other.length > 0 && <Grid fields={other} wide {...c} />}
+      {other.length > 0 && <Grid fields={other} {...c} />}
     </div>
   );
 }
@@ -420,16 +390,14 @@ export function LogsheetBlock({
   const c = { form, ed, original };
   const roles = new Set(block.fields.map((f) => f.linkRole));
   let body: ReactNode;
-  let wide = true;
   if (roles.has('consumed')) body = <StockTable fields={block.fields} {...c} />;
   else if (roles.has('present') || roles.has('vacant')) body = <StaffTable fields={block.fields} {...c} />;
   else if (roles.has('expense')) body = <CashPanel fields={block.fields} {...c} />;
   else {
     body = <Grid fields={block.fields} {...c} />;
-    wide = false;
   }
   return (
-    <BlockShell block={block} prog={prog} wide={wide}>
+    <BlockShell block={block} prog={prog}>
       {body}
     </BlockShell>
   );

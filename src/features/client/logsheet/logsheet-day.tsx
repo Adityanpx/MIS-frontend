@@ -117,7 +117,7 @@ function EntrySide({ form, ed, onSubmit }: { form: LogsheetForm; ed: LogsheetEdi
   const pct = ed.progress.total ? Math.round((ed.progress.filled / ed.progress.total) * 100) : 100;
   const warnings = ed.fullChecks.warnings.length;
   return (
-    <Card padded={false} className="space-y-4 p-4 sm:p-5">
+    <Card padded={false} className="space-y-3 rounded-md! p-3.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <div className="relative grid place-items-center">
           <Ring value={ed.progress.filled} max={ed.progress.total} size={56} stroke={6} />
@@ -208,7 +208,7 @@ function AtAGlance({ form, ed }: { form: LogsheetForm; ed: LogsheetEditor }) {
     },
   ];
   return (
-    <Card padded={false} className="p-4 sm:p-5">
+    <Card padded={false} className="rounded-md! p-3.5">
       <p className="text-ink-900 mb-3 text-[15px] font-semibold">At a glance</p>
       <dl className="space-y-2">
         {rows.map((r) => (
@@ -243,7 +243,7 @@ function SubmittedSide({
   const l = form.logsheet!;
   const canRequest = can('logsheet.requestCorrection') && !form.canCorrect;
   return (
-    <Card padded={false} className="grid gap-5 p-4 sm:p-5 lg:grid-cols-2">
+    <Card padded={false} className="grid gap-4 rounded-md! p-3.5 lg:grid-cols-2">
       <div className="space-y-4">
       <div className="flex items-center gap-3">
         <span className="bg-success-50 text-success-600 grid size-11 place-items-center rounded-2xl">
@@ -433,7 +433,7 @@ export function LogsheetDay({ date }: { date: string }) {
   return (
     <>
       {header}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {readOnly && ed.mode === 'view' && !submitted && (
           <Banner tone="warning" icon={<Lock />} title="The account is read-only">
             Logsheets can be viewed but not changed until the account is active again.
@@ -474,7 +474,7 @@ export function LogsheetDay({ date }: { date: string }) {
           </Banner>
         )}
 
-        <div className="grid items-start gap-4 xl:grid-cols-2">
+        <div className="xl:columns-2 xl:gap-3">
           {form.blocks.map((b) => (
             <LogsheetBlock key={b.block} form={form} block={b} ed={ed} prog={progressByBlock.get(b.block)} />
           ))}
