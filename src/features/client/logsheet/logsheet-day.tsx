@@ -474,7 +474,7 @@ export function LogsheetDay({ date }: { date: string }) {
           </Banner>
         )}
 
-        <div className="xl:columns-2 xl:gap-3">
+        <div className="grid gap-3 xl:grid-cols-2">
           {form.blocks.map((b) => (
             <LogsheetBlock key={b.block} form={form} block={b} ed={ed} prog={progressByBlock.get(b.block)} />
           ))}

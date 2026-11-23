@@ -76,12 +76,12 @@ function BlockShell({ block, prog, children }: { block: FormBlock; prog?: BlockP
   return (
     <motion.section
       id={`block-${block.block}`}
-      className="mb-3 scroll-mt-28 break-inside-avoid"
+      className="scroll-mt-28"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: Math.min(block.block, 8) * 0.03 }}
     >
-      <Card padded={false} className="rounded-md! p-3.5">
+      <Card padded={false} className="h-full rounded-md! p-3.5">
         <div className="mb-2.5 flex items-baseline justify-between gap-3">
           <h2 className="text-ink-900 text-sm font-semibold">{block.title}</h2>
           {prog && prog.total > 0 && (
