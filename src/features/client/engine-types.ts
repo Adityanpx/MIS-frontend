@@ -51,6 +51,9 @@ export interface PerKind {
   utd: Triple;
   events: { mtd: number; utd: number; flag: Flag };
   results: { today: ResultLine; mtd: ResultLine; utd: ResultLine };
+  /** Average per day, and days on which the limit was exceeded, for each period (absent on legacy payloads). */
+  avg?: { today: number | null; mtd: number | null; utd: number | null };
+  exceed?: { today: number; mtd: number; utd: number };
 }
 
 // ---------------------------------------------------------------------------

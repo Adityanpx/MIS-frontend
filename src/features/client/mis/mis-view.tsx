@@ -115,7 +115,7 @@ export function MisView() {
                 </Badge>
               ))}
             <DateNav value={reportDate} onChange={setDate} min={min} max={max} />
-            <Button className="no-print" loading={pdf.busy} onClick={() => void pdf.download(reportDate, 'mis')}>
+            <Button className="no-print" loading={pdf.busy} onClick={() => void pdf.download(reportDate, 'mis', { period, kind })}>
               <Download />
               Download PDF
             </Button>

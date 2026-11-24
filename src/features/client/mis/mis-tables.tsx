@@ -522,7 +522,7 @@ export type MisPeriod = 'today' | 'mtd' | 'utd';
  */
 export function SimpleParamTable({ rows, period, kind, chemicals }: { rows: ParamRow[]; period: MisPeriod; kind: StandardKind; chemicals?: boolean }) {
   return (
-    <MisTableShell minWidth={560}>
+    <MisTableShell minWidth={760}>
       <thead>
         <tr>
           <th className={cn(th, stickyCol, 'text-left')}>Parameter</th>
@@ -530,12 +530,17 @@ export function SimpleParamTable({ rows, period, kind, chemicals }: { rows: Para
           <th className={cn(th, 'text-right')}>Standard</th>
           <th className={cn(th, 'text-right')}>Actual</th>
           <th className={cn(th, 'text-right')}>Variance</th>
+          <th className={cn(th, 'text-right')}>Average / day</th>
+          <th className={cn(th, 'text-right')}>Limit exceeded (days)</th>
           {chemicals && <th className={cn(th, 'text-right')}>Balance</th>}
         </tr>
       </thead>
       <tbody>
         {rows.map((r) => {
-          const t = perKindOf(r, kind)[period];
+          const k = perKindOf(r, kind);
+          const t = k[period];
+          const avg = k.avg?.[period] ?? null;
+          const exceeded = k.exceed?.[period] ?? 0;
           const c = r as ChemicalRow;
           return (
             <tr key={r.code} className="group">
@@ -544,6 +549,8 @@ export function SimpleParamTable({ rows, period, kind, chemicals }: { rows: Para
               <td className={cn(td, 'text-ink-500 text-right')}>{fmtNum(t.std, r.decimals)}</td>
               <td className={cn(td, 'text-ink-900 text-right font-semibold')}>{fmtNum(t.act, r.decimals)}</td>
               <td className={cn(td, 'text-right font-medium', flagText[t.varFlag])}>{signed(t.var, r.decimals)}</td>
+              <td className={cn(td, 'text-ink-700 text-right')}>{fmtNum(avg, r.decimals)}</td>
+              <td className={cn(td, 'text-right font-medium', exceeded > 0 ? 'text-danger-600' : 'text-ink-500')}>{exceeded}</td>
               {chemicals && (
                 <td className={cn(td, 'text-right font-semibold', c.balanceFlag === 'bad' ? 'text-danger-600' : 'text-ink-900')}>
                   {fmtNum(c.balance, r.decimals)}
@@ -554,7 +561,7 @@ export function SimpleParamTable({ rows, period, kind, chemicals }: { rows: Para
         })}
         {rows.length === 0 && (
           <tr>
-            <td className={cn(td, 'text-ink-400 text-center')} colSpan={chemicals ? 6 : 5}>Nothing to show.</td>
+            <td className={cn(td, 'text-ink-400 text-center')} colSpan={chemicals ? 8 : 7}>Nothing to show.</td>
           </tr>
         )}
       </tbody>
