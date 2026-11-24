@@ -514,45 +514,113 @@ export function MaintenanceTabSection({
 
 /* ------------------------------------------------------------------ simple MIS table */
 
-export type MisPeriod = 'today' | 'mtd' | 'utd';
+export type MisPeriod = 'today' | 'mtd' | 'utd' | 'range' | 'all';
+export type MisKind = StandardKind | 'both';
+type OnePeriod = 'today' | 'mtd' | 'utd' | 'range';
+
+const GROUP_LABEL: Record<OnePeriod, string> = { today: 'Daily', mtd: 'Monthly', utd: 'UTD', range: 'Date range' };
+
+/** The period groups a filter shows; `range` only exists when a from–to window was picked. */
+export function periodsOf(period: MisPeriod, hasRange: boolean): OnePeriod[] {
+  if (period === 'all') return hasRange ? ['today', 'range', 'mtd', 'utd'] : ['today', 'mtd', 'utd'];
+  return [period === 'range' && !hasRange ? 'today' : period];
+}
 
 /**
- * The plain MIS table for one chosen period: Parameter · Unit · Standard · Actual · Variance (+ Balance for chemicals).
- * `kind` picks the Bidding or Actual standard.
+ * The MIS table for the chosen period(s) and standard(s). One column group per period.
+ * One standard: Standard · Actual · Variance · Average / day · Limit exceeded (days).
+ * Both: Actual · Average / day · Bidding std · Bidding var · Actual std · Actual var (the actual value is the same for both).
  */
-export function SimpleParamTable({ rows, period, kind, chemicals }: { rows: ParamRow[]; period: MisPeriod; kind: StandardKind; chemicals?: boolean }) {
+export function SimpleParamTable({
+  rows,
+  period,
+  kind,
+  hasRange = false,
+  rangeLabel,
+  chemicals,
+}: {
+  rows: ParamRow[];
+  period: MisPeriod;
+  kind: MisKind;
+  hasRange?: boolean;
+  rangeLabel?: string;
+  chemicals?: boolean;
+}) {
+  const pers = periodsOf(period, hasRange);
+  const both = kind === 'both';
+  const single: StandardKind = both ? 'actual' : kind;
+  const heads = both
+    ? ['Actual', 'Avg / day', 'Bid std', 'Bid var', 'Act std', 'Act var']
+    : ['Standard', 'Actual', 'Variance', 'Avg / day', 'Exceeded (days)'];
+  const span = heads.length;
+  const showGroupTitle = pers.length > 1 || pers[0] === 'range';
+  const cell = (r: ParamRow, per: OnePeriod, key: string) => {
+    const dp = r.decimals;
+    if (both) {
+      const b = perKindOf(r, 'bidding');
+      const a = perKindOf(r, 'actual');
+      const bt = b[per] ?? b.today;
+      const at = a[per] ?? a.today;
+      return [
+        <td key={`${key}-a`} className={cn(td, 'text-ink-900 text-right font-semibold')}>{fmtNum(at.act, dp)}</td>,
+        <td key={`${key}-v`} className={cn(td, 'text-ink-700 text-right')}>{fmtNum(a.avg?.[per] ?? null, dp)}</td>,
+        <td key={`${key}-bs`} className={cn(td, 'text-ink-500 text-right')}>{fmtNum(bt.std, dp)}</td>,
+        <td key={`${key}-bv`} className={cn(td, 'text-right font-medium', flagText[bt.varFlag])}>{signed(bt.var, dp)}</td>,
+        <td key={`${key}-as`} className={cn(td, 'text-ink-500 text-right')}>{fmtNum(at.std, dp)}</td>,
+        <td key={`${key}-av`} className={cn(td, 'text-right font-medium', flagText[at.varFlag])}>{signed(at.var, dp)}</td>,
+      ];
+    }
+    const k = perKindOf(r, single);
+    const t = k[per] ?? k.today;
+    const exceeded = k.exceed?.[per] ?? 0;
+    return [
+      <td key={`${key}-s`} className={cn(td, 'text-ink-500 text-right')}>{fmtNum(t.std, dp)}</td>,
+      <td key={`${key}-a`} className={cn(td, 'text-ink-900 text-right font-semibold')}>{fmtNum(t.act, dp)}</td>,
+      <td key={`${key}-v`} className={cn(td, 'text-right font-medium', flagText[t.varFlag])}>{signed(t.var, dp)}</td>,
+      <td key={`${key}-g`} className={cn(td, 'text-ink-700 text-right')}>{fmtNum(k.avg?.[per] ?? null, dp)}</td>,
+      <td key={`${key}-e`} className={cn(td, 'text-right font-medium', exceeded > 0 ? 'text-danger-600' : 'text-ink-500')}>{exceeded}</td>,
+    ];
+  };
+  const groupBorder = 'border-l border-line';
   return (
-    <MisTableShell minWidth={760}>
+    <MisTableShell minWidth={Math.max(760, 260 + pers.length * span * 84)}>
       <thead>
+        {showGroupTitle && (
+          <tr>
+            <th className={cn(th, stickyCol)} />
+            <th className={th} />
+            {pers.map((per) => (
+              <th key={per} colSpan={span} className={cn(th, groupBorder, 'text-center text-ink-700')}>
+                {GROUP_LABEL[per]}
+                {per === 'range' && rangeLabel ? ` · ${rangeLabel}` : ''}
+              </th>
+            ))}
+            {chemicals && <th className={th} />}
+          </tr>
+        )}
         <tr>
           <th className={cn(th, stickyCol, 'text-left')}>Parameter</th>
           <th className={cn(th, 'text-left')}>Unit</th>
-          <th className={cn(th, 'text-right')}>Standard</th>
-          <th className={cn(th, 'text-right')}>Actual</th>
-          <th className={cn(th, 'text-right')}>Variance</th>
-          <th className={cn(th, 'text-right')}>Average / day</th>
-          <th className={cn(th, 'text-right')}>Limit exceeded (days)</th>
-          {chemicals && <th className={cn(th, 'text-right')}>Balance</th>}
+          {pers.map((per) =>
+            heads.map((h, i) => (
+              <th key={`${per}-${h}`} className={cn(th, 'text-right', i === 0 && groupBorder)}>
+                {h}
+              </th>
+            )),
+          )}
+          {chemicals && <th className={cn(th, groupBorder, 'text-right')}>Balance</th>}
         </tr>
       </thead>
       <tbody>
         {rows.map((r) => {
-          const k = perKindOf(r, kind);
-          const t = k[period];
-          const avg = k.avg?.[period] ?? null;
-          const exceeded = k.exceed?.[period] ?? 0;
           const c = r as ChemicalRow;
           return (
             <tr key={r.code} className="group">
               <td className={cn(td, stickyCol, 'text-ink-900 group-hover:bg-canvas font-medium')}>{r.name}</td>
               <td className={cn(td, 'text-ink-500')}>{r.unit}</td>
-              <td className={cn(td, 'text-ink-500 text-right')}>{fmtNum(t.std, r.decimals)}</td>
-              <td className={cn(td, 'text-ink-900 text-right font-semibold')}>{fmtNum(t.act, r.decimals)}</td>
-              <td className={cn(td, 'text-right font-medium', flagText[t.varFlag])}>{signed(t.var, r.decimals)}</td>
-              <td className={cn(td, 'text-ink-700 text-right')}>{fmtNum(avg, r.decimals)}</td>
-              <td className={cn(td, 'text-right font-medium', exceeded > 0 ? 'text-danger-600' : 'text-ink-500')}>{exceeded}</td>
+              {pers.map((per) => cell(r, per, `${r.code}-${per}`))}
               {chemicals && (
-                <td className={cn(td, 'text-right font-semibold', c.balanceFlag === 'bad' ? 'text-danger-600' : 'text-ink-900')}>
+                <td className={cn(td, groupBorder, 'text-right font-semibold', c.balanceFlag === 'bad' ? 'text-danger-600' : 'text-ink-900')}>
                   {fmtNum(c.balance, r.decimals)}
                 </td>
               )}
@@ -561,7 +629,9 @@ export function SimpleParamTable({ rows, period, kind, chemicals }: { rows: Para
         })}
         {rows.length === 0 && (
           <tr>
-            <td className={cn(td, 'text-ink-400 text-center')} colSpan={chemicals ? 8 : 7}>Nothing to show.</td>
+            <td className={cn(td, 'text-ink-400 text-center')} colSpan={2 + pers.length * span + (chemicals ? 1 : 0)}>
+              Nothing to show.
+            </td>
           </tr>
         )}
       </tbody>

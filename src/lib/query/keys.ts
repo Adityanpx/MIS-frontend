@@ -16,7 +16,8 @@ export const qk = {
     overview: ['c', 'overview'] as const,
     dashboard: (plantId: string, date: string | null) =>
       ['c', 'plant', plantId, 'dashboard', date ?? 'latest'] as const,
-    mis: (plantId: string, date: string | null) => ['c', 'plant', plantId, 'mis', date ?? 'latest'] as const,
+    mis: (plantId: string, date: string | null, from?: string | null) =>
+      ['c', 'plant', plantId, 'mis', date ?? 'latest', from ?? ''] as const,
     trend: (plantId: string, param: string, from: string, to: string) =>
       ['c', 'plant', plantId, 'trend', param, from, to] as const,
     layout: (plantId: string) => ['c', 'plant', plantId, 'layout'] as const,

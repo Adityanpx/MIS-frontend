@@ -1,8 +1,9 @@
 'use client';
 
-import { Banknote, Download, FlaskConical, Gauge, Package, ShieldCheck, Table2, Users } from 'lucide-react';
+import { Banknote, Download, FlaskConical, Gauge, Package, Printer, ShieldCheck, Table2, Users } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
-import { DateNav } from '@/components/date/date-nav';
+import { DateRangePicker } from '@/components/date/date-range-picker';
 import { PageHeader } from '@/components/shell/page-header';
 import { Badge, StatusBadge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,24 +11,41 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { Segmented } from '@/components/ui/tabs';
 import { EmptyState, Skeleton } from '@/components/ui/misc';
 import { errorMessage } from '@/lib/api';
-import { fmtDateTime, fmtMoney0 } from '@/lib/format';
+import { isValidISODate } from '@/lib/dates';
+import { fmtDate, fmtDateTime, fmtMoney0 } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useMis } from '../engine-queries';
-import type { MisReport, StandardKind } from '../engine-types';
+import type { MisReport } from '../engine-types';
 import { usePlantPdf } from '../pdf';
 import { usePlantDate } from '../plant-date';
 import { usePlant } from '../plant-context';
-import { LabTable, RegistersTable, SafetyTable, SimpleParamTable, StaffTable, type MisPeriod } from './mis-tables';
+import {
+  LabTable,
+  RegistersTable,
+  SafetyTable,
+  SimpleParamTable,
+  StaffTable,
+  type MisKind,
+  type MisPeriod,
+} from './mis-tables';
 
-const KINDS: { value: StandardKind; label: string }[] = [
-  { value: 'bidding', label: 'Bidding' },
+const KINDS: { value: MisKind; label: string }[] = [
   { value: 'actual', label: 'Actual' },
+  { value: 'bidding', label: 'Bidding' },
+  { value: 'both', label: 'Both' },
 ];
-const PERIODS: { value: MisPeriod; label: string }[] = [
-  { value: 'today', label: 'Daily' },
-  { value: 'mtd', label: 'Monthly' },
-  { value: 'utd', label: 'UTD' },
-];
+const KIND_NAME: Record<MisKind, string> = {
+  actual: 'Actual standard',
+  bidding: 'Bidding standard',
+  both: 'Actual & Bidding standards',
+};
+const PERIOD_NAME: Record<MisPeriod, string> = {
+  today: 'Daily',
+  mtd: 'Monthly',
+  utd: 'Up to date',
+  range: 'Date range',
+  all: 'Daily · Monthly · UTD',
+};
 
 function Block({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
   return (
@@ -77,18 +95,33 @@ function CashBlock({ cash }: { cash: MisReport['cash'] }) {
   );
 }
 
+/** The dates the report is for: one date, or "start – end". */
+const dateText = (from: string, to: string) => (from === to ? fmtDate(to) : `${fmtDate(from)} – ${fmtDate(to)}`);
 
-/** /plants/[plantId]/mis/[[...date]] — the MIS report: one plain page, Daily / Monthly / Up to date. */
+/**
+ * /plants/[plantId]/mis/[[...date]]?from=
+ * The MIS report: Daily / Monthly / UTD / Date range / All × Actual / Bidding / Both.
+ * The path date is the end date; `from` (optional) makes it a range. The date pill shows exactly what is applied.
+ */
 export function MisView() {
   const { plant, can } = usePlant();
-  const { date, setDate, min, max } = usePlantDate('mis');
-  const q = useMis(plant.id, date);
+  const { date, min, max } = usePlantDate('mis');
+  const router = useRouter();
+  const sp = useSearchParams();
+  const rawFrom = sp.get('from');
+  const from = rawFrom && isValidISODate(rawFrom) && rawFrom < (date ?? max) ? rawFrom : null;
+  const q = useMis(plant.id, date, from);
   const pdf = usePlantPdf(plant.id, can('pdf.generate'));
-  const [period, setPeriod] = useState<MisPeriod>('today');
-  const [kind, setKind] = useState<StandardKind>('actual');
+  const [pick, setPick] = useState<MisPeriod>('today');
+  const [kind, setKind] = useState<MisKind>('actual');
 
   const m = q.data;
   const reportDate = m?.header.reportDate ?? date ?? max;
+  // the range the server actually used (it never starts before the MIS start)
+  const rangeFrom = from ? (m?.header.rangeFrom ?? from) : null;
+  const hasRange = !!rangeFrom && rangeFrom < reportDate;
+  const period: MisPeriod = pick === 'range' && !hasRange ? 'today' : pick;
+  const appliedFrom = hasRange ? rangeFrom : reportDate;
   const t = m?.tabs;
   const key = t?.key ?? m?.keyParameters ?? [];
   const chemicals = t?.chemicals ?? m?.chemicals ?? [];
@@ -98,6 +131,14 @@ export function MisView() {
   const staff = t?.administrative.staff ?? m?.staff;
   const safety = t?.administrative.safety ?? m?.safety;
   const logsheet = m?.header.logsheet;
+  const asOn = hasRange ? ` · as on ${fmtDate(reportDate)}` : '';
+  const rangeLabel = hasRange ? dateText(appliedFrom, reportDate) : undefined;
+
+  const go = (r: { from: string; to: string }) => {
+    router.push(`/plants/${plant.id}/mis/${r.to}${r.from < r.to ? `?from=${r.from}` : ''}`, { scroll: false });
+    if (r.from < r.to) setPick('range');
+    else if (pick === 'range') setPick('today');
+  };
 
   return (
     <>
@@ -114,14 +155,55 @@ export function MisView() {
                   No logsheet
                 </Badge>
               ))}
-            <DateNav value={reportDate} onChange={setDate} min={min} max={max} />
-            <Button className="no-print" loading={pdf.busy} onClick={() => void pdf.download(reportDate, 'mis', { period, kind })}>
+            <Button variant="secondary" className="no-print" disabled={!m} onClick={() => window.print()}>
+              <Printer />
+              Print
+            </Button>
+            <Button
+              className="no-print"
+              loading={pdf.busy}
+              disabled={!m}
+              onClick={() =>
+                void pdf.download(reportDate, 'mis', { period, kind, from: hasRange ? appliedFrom : null })
+              }
+            >
               <Download />
               Download PDF
             </Button>
           </>
         }
       />
+
+      <Card padded={false} className="no-print mb-6 flex flex-col gap-3 p-4 lg:flex-row lg:flex-wrap lg:items-center">
+        <DateRangePicker
+          className="w-full justify-between sm:w-auto"
+          value={{ from: appliedFrom, to: reportDate }}
+          onChange={go}
+          min={min}
+          max={max}
+        />
+        <div className="scrollbar-none -mx-1 overflow-x-auto px-1">
+          <Segmented
+            items={[
+              { value: 'today', label: 'Daily' },
+              { value: 'mtd', label: 'Monthly' },
+              { value: 'utd', label: 'UTD' },
+              { value: 'range', label: 'Range', disabled: !hasRange },
+              { value: 'all', label: 'All' },
+            ]}
+            value={period}
+            onChange={setPick}
+          />
+        </div>
+        <div className="scrollbar-none -mx-1 overflow-x-auto px-1">
+          <Segmented items={KINDS} value={kind} onChange={setKind} />
+        </div>
+      </Card>
+
+      {/* what a printed page shows in place of the filter bar */}
+      <p className="mb-4 hidden text-sm font-semibold print:block">
+        {dateText(appliedFrom, reportDate)} · {PERIOD_NAME[period]} · {KIND_NAME[kind]}
+      </p>
 
       {q.isLoading && <Skeleton className="rounded-card h-[520px]" />}
       {q.isError && !m && (
@@ -137,20 +219,23 @@ export function MisView() {
 
       {m && (
         <div className={cn('space-y-6 transition-opacity duration-300', q.isPlaceholderData && 'opacity-60')}>
-          <div className="no-print flex flex-wrap items-center gap-3">
-            <Segmented items={PERIODS} value={period} onChange={setPeriod} />
-            <Segmented items={KINDS} value={kind} onChange={setKind} />
-          </div>
           <Block title="Key parameters" icon={<Gauge />}>
-            <SimpleParamTable rows={key} period={period} kind={kind} />
+            <SimpleParamTable rows={key} period={period} kind={kind} hasRange={hasRange} rangeLabel={rangeLabel} />
           </Block>
           {chemicals.length > 0 && (
             <Block title="Chemicals" icon={<Package />}>
-              <SimpleParamTable rows={chemicals} period={period} kind={kind} chemicals />
+              <SimpleParamTable
+                rows={chemicals}
+                period={period}
+                kind={kind}
+                hasRange={hasRange}
+                rangeLabel={rangeLabel}
+                chemicals
+              />
             </Block>
           )}
           {lab && (
-            <Block title="Quality control" icon={<FlaskConical />}>
+            <Block title={`Quality control${asOn}`} icon={<FlaskConical />}>
               <p className="text-ink-400 mb-2 text-[11px] font-medium tracking-wider uppercase">Inlet</p>
               <LabTable rows={lab.inlet} v11={!!t} />
               <p className="text-ink-400 mt-6 mb-2 text-[11px] font-medium tracking-wider uppercase">Outlet</p>
@@ -158,17 +243,17 @@ export function MisView() {
             </Block>
           )}
           {registers && (
-            <Block title="Bank guarantees & insurance" icon={<ShieldCheck />}>
+            <Block title={`Bank guarantees & insurance${asOn}`} icon={<ShieldCheck />}>
               <RegistersTable registers={registers} />
             </Block>
           )}
           {cash && (
-            <Block title="Site cash" icon={<Banknote />}>
+            <Block title={`Site cash${asOn}`} icon={<Banknote />}>
               <CashBlock cash={cash} />
             </Block>
           )}
           {staff && safety && (
-            <Block title="Staff & safety" icon={<Users />}>
+            <Block title={`Staff & safety${asOn}`} icon={<Users />}>
               <div className="grid gap-6 xl:grid-cols-2">
                 <StaffTable staff={staff as MisReport['staff']} />
                 <SafetyTable safety={safety as MisReport['safety']} />

@@ -14,12 +14,12 @@ export function usePlantPdf(plantId: string, _canGenerate?: boolean) {
   const [busy, setBusy] = useState(false);
 
   /** `filter` (MIS page only): the Daily / Monthly / UTD and Actual / Bidding picked on screen; the PDF prints exactly that. */
-  async function download(date: string, type: PdfDoc['doc_type'], filter?: { period: string; kind: string }) {
+  async function download(date: string, type: PdfDoc['doc_type'], filter?: { period: string; kind: string; from?: string | null }) {
     setBusy(true);
     const wait = window.setTimeout(() => toast.message('Preparing your PDF…', { id: 'pdf-wait', duration: 20_000 }), 2500);
     try {
       await clientApi.download(`/plants/${plantId}/pdfs/file`, {
-        query: { date, type, ...(filter ?? {}) },
+        query: { date, type, ...(filter ?? {}), from: filter?.from || undefined },
         fallbackName: `${type}-${date}.pdf`,
       });
     } catch (e) {

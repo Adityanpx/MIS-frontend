@@ -49,11 +49,13 @@ export interface PerKind {
   today: Triple;
   mtd: Triple;
   utd: Triple;
+  /** The picked from..to window (equals today when no range was asked for). */
+  range?: Triple;
   events: { mtd: number; utd: number; flag: Flag };
-  results: { today: ResultLine; mtd: ResultLine; utd: ResultLine };
+  results: { today: ResultLine; mtd: ResultLine; utd: ResultLine; range?: ResultLine };
   /** Average per day, and days on which the limit was exceeded, for each period (absent on legacy payloads). */
-  avg?: { today: number | null; mtd: number | null; utd: number | null };
-  exceed?: { today: number; mtd: number; utd: number };
+  avg?: { today: number | null; mtd: number | null; utd: number | null; range?: number | null };
+  exceed?: { today: number; mtd: number; utd: number; range?: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -239,6 +241,10 @@ export interface MisReportHeader {
   omMonthNo: number;
   omYearNo: string | null;
   reportDate: string;
+  rangeFrom?: string;
+  rangeTo?: string;
+  rangeDays?: number;
+  rangeDataDays?: number;
   mtdDays: number;
   utdDays: number;
   mtdDataDays: number;
@@ -291,6 +297,10 @@ export interface MisReport {
     omMonthNo: number;
     omYearNo: string | null;
     reportDate: string;
+    rangeFrom?: string;
+    rangeTo?: string;
+    rangeDays?: number;
+    rangeDataDays?: number;
     mtdDays: number;
     utdDays: number;
     mtdDataDays: number;

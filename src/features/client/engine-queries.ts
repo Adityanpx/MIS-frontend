@@ -38,10 +38,10 @@ export function useDashboard(plantId: string, date: string | null) {
   });
 }
 
-export function useMis(plantId: string, date: string | null) {
+export function useMis(plantId: string, date: string | null, from?: string | null) {
   return useQuery({
-    queryKey: qk.client.mis(plantId, date),
-    queryFn: () => clientApi.get<MisReport>(`/plants/${plantId}/mis`, { query: { date } }),
+    queryKey: qk.client.mis(plantId, date, from),
+    queryFn: () => clientApi.get<MisReport>(`/plants/${plantId}/mis`, { query: { date, from: from || undefined } }),
     enabled: useSignedIn(),
     staleTime: ENGINE_STALE,
     placeholderData: keepPreviousData,
