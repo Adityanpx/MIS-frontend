@@ -89,18 +89,15 @@ export const importApi = {
       query: { from, to },
       fallbackName: `logsheet-template_${from}_${to}.xlsx`,
     }),
-  preview: async (plantId: string, file: File, from: string, to: string) => {
+  /** The date range is read from the file itself (its hidden sheet), so only the file is sent. */
+  preview: async (plantId: string, file: File) => {
     const form = new FormData();
     form.append('file', file);
-    form.append('from', from);
-    form.append('to', to);
     return clientApi.upload<ImportPreview>(`${base(plantId)}/import/preview`, form);
   },
-  run: async (plantId: string, file: File, from: string, to: string, conflict: ImportConflictPolicy) => {
+  run: async (plantId: string, file: File, conflict: ImportConflictPolicy) => {
     const form = new FormData();
     form.append('file', file);
-    form.append('from', from);
-    form.append('to', to);
     form.append('conflict', conflict);
     return clientApi.upload<ImportResult>(`${base(plantId)}/import`, form);
   },

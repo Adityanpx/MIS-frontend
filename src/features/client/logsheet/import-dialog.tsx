@@ -43,25 +43,44 @@ function compactDateRanges(dates: string[]): string {
   return out.join(', ');
 }
 
-/** Groups issues by (code+name+message) so "missing Chemical-X from 05 → 09" collapses to one line. */
+const NUM = /-?\d[\d,]*(?:\.\d+)?/g;
+
+/**
+ * Groups issues by column + message shape, ignoring the numbers inside the message, so
+ * "PF: 0.93 is outside the warning limit" and "PF: 0.94 …" become ONE line with every date.
+ * When the numbers differ, the line says "Value is outside …" and lists the values found.
+ */
 function groupIssues(items: ImportIssue[]): Array<{ title: string; message: string; dates: string[] }> {
-  const by = new Map<string, { title: string; message: string; dates: string[] }>();
+  const by = new Map<string, { title: string; messages: Set<string>; values: Set<string>; dates: string[] }>();
   for (const i of items) {
-    const key = `${i.code}|${i.message}`;
-    const entry = by.get(key);
-    if (entry) entry.dates.push(i.date);
-    else by.set(key, { title: i.name, message: i.message, dates: [i.date] });
+    const key = `${i.code}|${i.message.replace(NUM, '#')}`;
+    const entry = by.get(key) ?? { title: i.name, messages: new Set(), values: new Set(), dates: [] };
+    entry.messages.add(i.message);
+    // the value the user typed: "Name: <value> is outside …"
+    const typed = /^[^:]+:\s*(-?\d[\d,]*(?:\.\d+)?)\s/.exec(i.message)?.[1];
+    if (typed) entry.values.add(typed);
+    entry.dates.push(i.date);
+    by.set(key, entry);
   }
-  return [...by.values()].sort((a, b) => b.dates.length - a.dates.length || a.title.localeCompare(b.title));
+  return [...by.values()]
+    .map((g) => {
+      const first = [...g.messages][0] ?? '';
+      if (g.messages.size === 1) return { title: g.title, message: first, dates: g.dates };
+      const generic = first.replace(/^[^:]+:\s*-?\d[\d,]*(?:\.\d+)?\s+/, 'Value ').replace(/\s*\(\s*-?\d[\d,]*(?:\.\d+)?\s*\)/g, '');
+      const values = [...g.values].sort((a, b) => Number(a.replace(/,/g, '')) - Number(b.replace(/,/g, '')));
+      return { title: g.title, message: values.length ? `${generic} (values: ${values.join(', ')})` : generic, dates: g.dates };
+    })
+    .sort((a, b) => b.dates.length - a.dates.length || a.title.localeCompare(b.title));
 }
 
 export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { plant } = usePlant();
   const qc = useQueryClient();
 
-  // Sensible default: last 7 days up to today, clipped to the plant's O&M window.
+  // Sensible default: the 7 days up to YESTERDAY (today is usually not open yet), clipped to the O&M window.
   const today = todayIST();
-  const defTo = plant.omEnd < today ? plant.omEnd : today;
+  const yesterday = addDays(today, -1);
+  const defTo = plant.omEnd < yesterday ? plant.omEnd : yesterday;
   const defFrom = (() => {
     const back = addDays(defTo, -6);
     return back < plant.misStart ? plant.misStart : back;
@@ -119,7 +138,7 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
     setUploading(true);
     setPreview(null);
     try {
-      const p = await importApi.preview(plant.id, file, from, to);
+      const p = await importApi.preview(plant.id, file);
       setPreview(p);
       setStep('preview');
     } catch (e) {
@@ -133,7 +152,7 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
     if (!file || !preview?.ok) return;
     setSaving(true);
     try {
-      const r = await importApi.run(plant.id, file, from, to, conflict);
+      const r = await importApi.run(plant.id, file, conflict);
       setResult(r);
       setStep('done');
       invalidatePlantData(qc, plant.id);
@@ -211,10 +230,7 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                 {downloading ? <Loader2 className="animate-spin" /> : <Download />}
                 Download template
               </Button>
-              <Button
-                onClick={() => setStep('upload')}
-                disabled={!!rangeError}
-              >
+              <Button onClick={() => setStep('upload')}>
                 I already have the file <ArrowRight />
               </Button>
             </div>
@@ -225,9 +241,9 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
       {/* ──────── STEP: Upload ──────── */}
       {step === 'upload' && (
         <div className="space-y-4">
-          <div className="text-ink-600 text-sm">
-            Range: <strong className="text-ink-900">{fmtDate(from)} → {fmtDate(to)}</strong>
-          </div>
+          <p className="text-ink-600 text-sm">
+            The dates are read from the file itself, so upload any template downloaded for this plant.
+          </p>
           <label
             className={cn(
               'flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition-colors',
@@ -277,6 +293,9 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
       {/* ──────── STEP: Preview ──────── */}
       {step === 'preview' && preview && (
         <div className="space-y-4">
+          <div className="text-ink-600 text-sm">
+            File covers: <strong className="text-ink-900">{fmtDate(preview.from)} → {fmtDate(preview.to)}</strong>
+          </div>
           <SummaryStrip preview={preview} />
 
           {/* Errors — grouped by column */}
