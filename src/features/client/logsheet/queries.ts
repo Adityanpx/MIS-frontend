@@ -9,6 +9,9 @@ import type {
   CorrectResult,
   DraftResult,
   HistoryRow,
+  ImportConflictPolicy,
+  ImportPreview,
+  ImportResult,
   LogCalendar,
   LogsheetForm,
   SubmitResult,
@@ -74,6 +77,33 @@ export const logApi = {
     clientApi.post(`${base(plantId)}/correction-requests/${id}/${approve ? 'approve' : 'reject'}`, {
       comment: comment || undefined,
     }),
+};
+
+/**
+ * Excel import (LOG-IMPORT): download a blank template, preview an upload, or save it.
+ * The template download goes through clientApi.download so the browser gets a .xlsx file.
+ */
+export const importApi = {
+  downloadTemplate: (plantId: string, from: string, to: string) =>
+    clientApi.download(`${base(plantId)}/import/template`, {
+      query: { from, to },
+      fallbackName: `logsheet-template_${from}_${to}.xlsx`,
+    }),
+  preview: async (plantId: string, file: File, from: string, to: string) => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('from', from);
+    form.append('to', to);
+    return clientApi.upload<ImportPreview>(`${base(plantId)}/import/preview`, form);
+  },
+  run: async (plantId: string, file: File, from: string, to: string, conflict: ImportConflictPolicy) => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('from', from);
+    form.append('to', to);
+    form.append('conflict', conflict);
+    return clientApi.upload<ImportResult>(`${base(plantId)}/import`, form);
+  },
 };
 
 /**

@@ -152,6 +152,42 @@ export interface CorrectionRequest {
   decided_at: string | null;
 }
 
+// ─── Excel import ────────────────────────────────────────────────
+
+export type ImportConflictPolicy = 'use_excel' | 'keep_existing';
+
+export interface ImportIssue {
+  date: string;
+  code: string;
+  name: string;
+  message: string;
+}
+export interface ImportConflictRow {
+  date: string;
+  /** already-present status (submitted / corrected / checked / verified / draft) */
+  status: LogStatus;
+}
+export interface ImportPreview {
+  from: string;
+  to: string;
+  rows: number;
+  rowsReady: number;
+  errors: ImportIssue[];
+  warnings: ImportIssue[];
+  conflicts: ImportConflictRow[];
+  ok: boolean;
+}
+export interface ImportResult {
+  from: string;
+  to: string;
+  saved: number;
+  skipped: number;
+  corrected: number;
+  inserted: number;
+  dataVersion: number;
+  warnings: ImportIssue[];
+}
+
 export const BLOCK_REASON_TEXT: Record<DateBlockReason, { title: string; text: string }> = {
   OUTSIDE_CONTRACT: {
     title: 'Outside the MIS period',

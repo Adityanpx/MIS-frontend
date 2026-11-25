@@ -6,12 +6,13 @@ import {
   CheckCircle2,
   ChevronRight,
   FilePenLine,
+  FileSpreadsheet,
   PencilLine,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Donut } from '@/components/charts/donut';
 import { C } from '@/components/charts/theme';
 import { StatCard } from '@/components/data/stat-card';
@@ -28,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { weekday } from '../engine-ui';
 import { usePlantDate } from '../plant-date';
 import { usePlant } from '../plant-context';
+import { ImportDialog } from './import-dialog';
 import { useLogCalendar } from './queries';
 import { BLOCK_REASON_TEXT, type CalendarDay, type DayStatus } from './types';
 
@@ -122,6 +124,7 @@ export function LogsheetCalendar() {
   const month = qMonth && /^\d{4}-\d{2}$/.test(qMonth) ? qMonth : fallback;
   const q = useLogCalendar(plant.id, month);
   const today = todayIST();
+  const [importOpen, setImportOpen] = useState(false);
 
   const setMonth = (m: string) => router.replace(`${pathname}?month=${m}`, { scroll: false });
 
@@ -149,6 +152,12 @@ export function LogsheetCalendar() {
         actions={
           <>
             <MonthNav value={month} onChange={setMonth} min={plant.misStart} max={pd.max} />
+            {can('logsheet.edit') && (
+              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                <FileSpreadsheet />
+                Import Excel
+              </Button>
+            )}
             {continueDay && can('logsheet.edit') && (
               <Button asChild>
                 <Link href={pd.hrefFor('logsheet', continueDay.date)}>
@@ -160,6 +169,7 @@ export function LogsheetCalendar() {
           </>
         }
       />
+      <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
