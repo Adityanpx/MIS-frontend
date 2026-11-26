@@ -1,6 +1,6 @@
 'use client';
 
-import { Banknote, Download, FlaskConical, Gauge, Package, Printer, ShieldCheck, Table2, Users } from 'lucide-react';
+import { Banknote, Download, FlaskConical, Gauge, HardHat, Package, Printer, ShieldCheck, Table2, Users } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { DateRangePicker } from '@/components/date/date-range-picker';
@@ -252,13 +252,19 @@ export function MisView() {
               <CashBlock cash={cash} />
             </Block>
           )}
-          {staff && safety && (
-            <Block title={`Staff & safety${asOn}`} icon={<Users />}>
-              <div className="grid gap-6 xl:grid-cols-2">
-                <StaffTable staff={staff as MisReport['staff']} />
-                <SafetyTable safety={safety as MisReport['safety']} />
-              </div>
-            </Block>
+          {(staff || safety) && (
+            <div className={cn('grid gap-6', staff && safety && 'xl:grid-cols-2')}>
+              {staff && (
+                <Block title={`Staff${asOn}`} icon={<Users />}>
+                  <StaffTable staff={staff as MisReport['staff']} />
+                </Block>
+              )}
+              {safety && (
+                <Block title={`Safety${asOn}`} icon={<HardHat />}>
+                  <SafetyTable safety={safety as MisReport['safety']} />
+                </Block>
+              )}
+            </div>
           )}
           <p className="text-ink-400 text-center text-xs">
             Generated {fmtDateTime(m.meta.generatedAt)}
