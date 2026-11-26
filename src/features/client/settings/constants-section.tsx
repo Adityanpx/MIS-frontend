@@ -27,6 +27,7 @@ import {
 } from './parts';
 import { apiErrors, checkBody, useSettings, useSettingsWrite } from './queries';
 import type { ConstantRow } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 interface Grouped {
   code: string;
@@ -76,7 +77,7 @@ export function ConstantsSection() {
       ...effectiveBody(eff),
     });
     const extra = effectiveErrors(eff);
-    if (!c.ok || Object.keys(extra).length) return setErrors({ ...(c.ok ? {} : c.errors), ...extra });
+    if (!c.ok || Object.keys(extra).length) return setErrors(notifyInvalid({ ...(c.ok ? {} : c.errors), ...extra }));
     try {
       await write.mutateAsync(c.data);
       setEdit(null);

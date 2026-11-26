@@ -27,6 +27,7 @@ import { usePlant } from '../plant-context';
 import { Fact, numOrUndef, SectionHeader, SectionSkeleton, ToggleRow, useCanEditSettings } from './parts';
 import { apiErrors, checkBody, useSettings, useSettingsWrite } from './queries';
 import type { ContractYear, ContractYears, RevenueComponent } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 type Req = { path: string; method: 'post' | 'patch' | 'del'; body?: unknown };
 
@@ -96,7 +97,7 @@ export function ContractSection() {
   function saveFee() {
     if (!fee) return;
     const c = checkBody(contractYearPatchBody, { fixedFee: fee.value.replace(/[,\s₹]/g, '') });
-    if (!c.ok) return setErrors(c.errors);
+    if (!c.ok) return setErrors(notifyInvalid(c.errors));
     void run({ path: `/${fee.year.yearNo}`, method: 'patch', body: c.data }, () => setFee(null));
   }
   function saveComp() {
@@ -104,13 +105,13 @@ export function ContractSection() {
     const body = { name: comp.v.name, rate: numOrUndef(comp.v.rate), stdQtyPerDay: numOrUndef(comp.v.stdQtyPerDay) };
     if (comp.c) {
       const c = checkBody(componentPatchBody, body);
-      if (!c.ok) return setErrors(c.errors);
+      if (!c.ok) return setErrors(notifyInvalid(c.errors));
       void run({ path: `/${comp.year.yearNo}/components/${comp.c.id}`, method: 'patch', body: c.data }, () =>
         setComp(null),
       );
     } else {
       const c = checkBody(componentCreateBody, { ...body, parameterCode: comp.v.parameterCode });
-      if (!c.ok) return setErrors(c.errors);
+      if (!c.ok) return setErrors(notifyInvalid(c.errors));
       void run({ path: `/${comp.year.yearNo}/components`, method: 'post', body: c.data }, () => setComp(null));
     }
   }
@@ -122,7 +123,7 @@ export function ContractSection() {
       target: esc.target,
       roundUpToRupee: esc.round,
     });
-    if (!c.ok) return setErrors(c.errors);
+    if (!c.ok) return setErrors(notifyInvalid(c.errors));
     void run({ path: '/apply-escalation', method: 'post', body: c.data }, () => setEsc(null));
   }
 

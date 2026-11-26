@@ -17,6 +17,7 @@ import { cn, newId } from '@/lib/utils';
 import { clientTdsFields, paymentNotificationFields } from '@/shared/schemas/billing';
 import { apiErrors, checkBody } from '../settings/queries';
 import { TDS_SECTIONS, type InvoiceRef } from './billing-api';
+import { notifyInvalid } from '@/lib/form-errors';
 
 const MAX = 5 * 1024 * 1024;
 
@@ -76,7 +77,7 @@ export function PaidDialog({ invoice, onClose }: { invoice: InvoiceRef | null; o
       paidOn: v.paidOn,
       reference: v.reference,
     });
-    if (!c.ok) return setErrors(c.errors);
+    if (!c.ok) return setErrors(notifyInvalid(c.errors));
     const fd = new FormData();
     fd.append('amount', c.data.amount);
     fd.append('paidOn', c.data.paidOn);
@@ -160,7 +161,7 @@ export function TdsDialog({ invoice, onClose }: { invoice: InvoiceRef | null; on
       section: v.section,
       deductionDate: v.deductionDate,
     });
-    if (!c.ok) return setErrors(c.errors);
+    if (!c.ok) return setErrors(notifyInvalid(c.errors));
     const fd = new FormData();
     fd.append('amount', c.data.amount);
     fd.append('section', c.data.section);

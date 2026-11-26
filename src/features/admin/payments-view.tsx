@@ -59,6 +59,7 @@ import {
   withAll,
 } from './kit';
 import type { AdminInvoice, AdminNotification, AdminPayment } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 type Tab = 'payments' | 'notifications';
 
@@ -531,7 +532,7 @@ export function RecordPayment() {
       ...(allocations.length ? { allocations } : {}),
       overrideReason: t(f.overrideReason),
     });
-    if (!v.ok) return setErrors(v.errors);
+    if (!v.ok) return setErrors(notifyInvalid(v.errors));
     setErrors({});
     try {
       const r = await run(

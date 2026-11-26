@@ -35,6 +35,7 @@ import {
 } from './parts';
 import { apiErrors, checkBody, useSettings, useSettingsWrite } from './queries';
 import type { SafetyDto, StaffDto } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 type Kind = 'staff' | 'safety';
 interface Row {
@@ -121,13 +122,13 @@ export function PeopleSection({ kind }: { kind: Kind }) {
         kind === 'staff'
           ? checkBody(staffCreateBody, { name, code: code.trim() || undefined, strength: numOrUndef(value) })
           : checkBody(safetyCreateBody, { name, code: code.trim() || undefined, qty: numOrUndef(value) });
-      if (!c.ok) return setErrors(c.errors);
+      if (!c.ok) return setErrors(notifyInvalid(c.errors));
       req = { path: '', method: 'post', body: c.data };
     } else if (mode.type === 'value' && mode.row) {
       const body = { [kind === 'staff' ? 'strength' : 'qty']: numOrUndef(value), ...effectiveBody(eff) };
       const c = kind === 'staff' ? checkBody(strengthBody, body) : checkBody(requirementBody, body);
       const extra = effectiveErrors(eff);
-      if (!c.ok || Object.keys(extra).length) return setErrors({ ...(c.ok ? {} : c.errors), ...extra });
+      if (!c.ok || Object.keys(extra).length) return setErrors(notifyInvalid({ ...(c.ok ? {} : c.errors), ...extra }));
       req = {
         path: `/${mode.row.id}/${kind === 'staff' ? 'strengths' : 'requirements'}`,
         method: 'post',
@@ -135,7 +136,7 @@ export function PeopleSection({ kind }: { kind: Kind }) {
       };
     } else if (mode.row) {
       const c = checkBody(itemPatchBody, { name });
-      if (!c.ok) return setErrors(c.errors);
+      if (!c.ok) return setErrors(notifyInvalid(c.errors));
       req = { path: `/${mode.row.id}`, method: 'patch', body: c.data };
     }
     if (!req) return;

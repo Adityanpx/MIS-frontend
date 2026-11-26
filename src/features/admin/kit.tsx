@@ -17,6 +17,7 @@ import { qk } from '@/lib/query/keys';
 import { cn } from '@/lib/utils';
 import { INDIAN_STATES } from '@/shared/indian-states';
 import type { AdminClient } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 /**
  * Super Admin data kit (File 5). Every admin read goes through `useA` / `useAList` (key = path + query),
@@ -81,6 +82,7 @@ export function errorsOf(e: unknown): Record<string, string> {
   const f = fieldErrors(e);
   if (Object.keys(f).length === 0 || (isApiError(e) && e.code !== 'VALIDATION_FAILED' && !e.details?.field))
     toast.error(errorMessage(e));
+  else notifyInvalid(f); // field errors: always say which field, even if it is not on screen
   return f;
 }
 

@@ -70,6 +70,7 @@ import type {
   LifecycleEvent,
   UsageRow,
 } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 type Tab = 'overview' | 'plants' | 'users' | 'billing' | 'documents' | 'history' | 'usage' | 'support' | 'data';
 
@@ -503,7 +504,7 @@ function InviteDrawer({ client, open, onClose }: { client: AdminClient; open: bo
       ...(f.designation.trim() ? { designation: f.designation.trim() } : {}),
       isClientAdmin: f.isClientAdmin,
     });
-    if (!v.ok) return setErrors(v.errors);
+    if (!v.ok) return setErrors(notifyInvalid(v.errors));
     try {
       await run('invite', () => adminApi.post(`/clients/${client.id}/users`, v.data), 'Invitation sent');
       setF({ name: '', email: '', mobile: '', designation: '', isClientAdmin: false });
@@ -654,7 +655,7 @@ function RefundDialog({ client, onClose }: { client: AdminClient; onClose: () =>
   const { run, busy } = useRun();
   async function go() {
     const v = check(refundBody, { ...f, reference: f.reference.trim() || undefined, reason: f.reason.trim() });
-    if (!v.ok) return setErrors(v.errors);
+    if (!v.ok) return setErrors(notifyInvalid(v.errors));
     try {
       await run('refund', () => adminApi.post(`/clients/${client.id}/credit/refund`, v.data), 'Refund recorded');
       onClose();
@@ -982,7 +983,7 @@ function SupportTab({ client }: { client: AdminClient }) {
   const { run, busy } = useRun();
   async function start() {
     const v = check(actAsBody, { mode, ...(reason.trim() ? { reason: reason.trim() } : {}) });
-    if (!v.ok) return setErrors(v.errors);
+    if (!v.ok) return setErrors(notifyInvalid(v.errors));
     setErrors({});
     const tab = window.open('about:blank', '_blank');
     try {

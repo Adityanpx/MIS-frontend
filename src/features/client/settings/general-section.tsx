@@ -16,6 +16,7 @@ import { usePlant } from '../plant-context';
 import { Fact, PanelCard, SectionHeader, SectionSkeleton, ToggleRow, useCanEditSettings } from './parts';
 import { apiErrors, checkBody, useSettings, useSettingsWrite } from './queries';
 import type { GeneralSettings } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 type Form = {
   displayName: string;
@@ -100,7 +101,7 @@ export function GeneralSection() {
     }
     if (changed.misStart) body.confirmMisStartChange = confirmMis;
     const c = checkBody(generalPatchBody, body);
-    if (!c.ok) return setErrors(c.errors);
+    if (!c.ok) return setErrors(notifyInvalid(c.errors));
     setErrors({});
     try {
       await save.mutateAsync(c.data as Record<string, unknown>);

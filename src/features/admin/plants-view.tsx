@@ -55,6 +55,7 @@ import {
   withAll,
 } from './kit';
 import type { AdminClient, AdminPlant, AdminPlantDetail, PlantPreview, ScheduleRow } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 /** /admin/plants (PL-01) */
 export function PlantsList() {
@@ -224,14 +225,25 @@ export function PlantWizard() {
     ['omStart', 'omTenureMonths', 'misStart'],
     ['subscription'],
   ];
+  const inStep = (k: string, s: number) => STEP_FIELDS[s]?.some((p) => k === p || k.startsWith(`${p}.`)) ?? false;
+  /** First step holding one of these errors (the current one when none matches, e.g. a whole-form error). */
+  const stepOf = (errs: Record<string, string>, fallback: number) => {
+    const i = STEP_FIELDS.findIndex((_, s) => Object.keys(errs).some((k) => inStep(k, s)));
+    return i === -1 ? fallback : i;
+  };
+  /** Show the errors where they are: go to their step and say what is wrong. */
+  const showErrors = (errs: Record<string, string>, fallback: number) => {
+    setErrors(errs);
+    setStep(stepOf(errs, fallback));
+  };
   async function next() {
     const v = check(plantCreateBody, body());
     const errs = v.ok ? {} : v.errors;
-    const mine = Object.keys(errs).filter((k) => STEP_FIELDS[step]?.some((p) => k === p || k.startsWith(`${p}.`)));
-    if (mine.length) return setErrors(errs);
+    const mine = Object.fromEntries(Object.entries(errs).filter(([k]) => inStep(k, step)));
+    if (Object.keys(mine).length) return setErrors(notifyInvalid(mine));
     setErrors({});
     if (step < 2) return setStep(step + 1);
-    if (!v.ok) return setErrors(errs);
+    if (!v.ok) return showErrors(notifyInvalid(errs), step);
     try {
       const p = await run('preview', () => adminApi.post<PlantPreview>('/plants/preview', v.data));
       if (p) {
@@ -239,12 +251,12 @@ export function PlantWizard() {
         setStep(3);
       }
     } catch (e) {
-      setErrors(errorsOf(e));
+      showErrors(errorsOf(e), step);
     }
   }
   async function create() {
     const v = check(plantCreateBody, body());
-    if (!v.ok) return setErrors(v.errors);
+    if (!v.ok) return showErrors(notifyInvalid(v.errors), step);
     try {
       const r = await run(
         'create',
@@ -253,8 +265,7 @@ export function PlantWizard() {
       );
       if (r) router.push(`/admin/plants/${r.id}`);
     } catch (e) {
-      setErrors(errorsOf(e));
-      setStep(0);
+      showErrors(errorsOf(e), step);
     }
   }
 
@@ -742,7 +753,7 @@ function EditPlantDrawer({ plant, onClose }: { plant: AdminPlantDetail; onClose:
   const { run, busy } = useRun();
   async function save() {
     const v = check(plantPatchBody, { ...f, name: f.name.trim(), city: f.city.trim() || null });
-    if (!v.ok) return setErrors(v.errors);
+    if (!v.ok) return setErrors(notifyInvalid(v.errors));
     try {
       await run('save', () => adminApi.patch(`/plants/${plant.id}`, v.data), 'Plant saved');
       onClose();
@@ -798,7 +809,7 @@ function ExtendDialog({ plant, onClose }: { plant: AdminPlantDetail; onClose: ()
   const newEnd = addDays(plant.omEnd, Math.round((Number(months) - plant.omTenureMonths) * 30.44));
   async function go() {
     const v = check(extendTenureBody, { omTenureMonths: months, reason: reason.trim() });
-    if (!v.ok) return setErrors(v.errors);
+    if (!v.ok) return setErrors(notifyInvalid(v.errors));
     try {
       await run('extend', () => adminApi.post(`/plants/${plant.id}/extend-tenure`, v.data), 'O&M tenure extended');
       onClose();

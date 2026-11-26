@@ -31,6 +31,7 @@ import {
   withAll,
 } from './kit';
 import type { AdminClient } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 /** /admin/clients — every client with state, plants and users (CL-01). */
 export function ClientsList() {
@@ -252,7 +253,7 @@ export function ClientForm({ client, onDone }: { client?: AdminClient; onDone: (
   async function save() {
     const body = toBody(f, create);
     const v = create ? check(clientCreateBody, body) : check(clientPatchBody, body);
-    if (!v.ok) return setErrors(v.errors);
+    if (!v.ok) return setErrors(notifyInvalid(v.errors));
     setErrors({});
     try {
       const r = await run(

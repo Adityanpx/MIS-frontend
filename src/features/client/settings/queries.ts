@@ -20,6 +20,7 @@ import type {
   StaffDto,
   StockItemDto,
 } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 /** section id → API path + response type. One cache entry per section. */
 export interface SettingsData {
@@ -95,7 +96,7 @@ export function apiErrors(e: unknown): Record<string, string> {
   const f = fieldErrors(e);
   if (Object.keys(f).length === 0 || (isApiError(e) && e.code !== 'VALIDATION_FAILED' && !e.details?.field)) {
     toast.error(errorMessage(e));
-  }
+  } else notifyInvalid(f); // field errors: always say which field, even if it is not on screen
   return f;
 }
 

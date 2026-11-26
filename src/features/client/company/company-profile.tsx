@@ -20,6 +20,7 @@ import { companyPatchBody } from '@/shared/schemas/company';
 import { Fact } from '../settings/parts';
 import { apiErrors, checkBody } from '../settings/queries';
 import { ClientAdminOnly, type CompanyDto } from './company-api';
+import { notifyInvalid } from '@/lib/form-errors';
 
 /** /company — company profile (CA-04). Legal name, GSTIN, PAN, state and address drive invoices: Super Admin only. */
 export function CompanyProfile() {
@@ -56,7 +57,7 @@ export function CompanyProfile() {
       primaryContact: { name: v.name, email: v.email, mobile: v.mobile.trim() || undefined },
       billingEmails: v.emails.map((e) => e.trim()).filter(Boolean),
     });
-    if (!c.ok) return setErrors(c.errors);
+    if (!c.ok) return setErrors(notifyInvalid(c.errors));
     setErrors({});
     setBusy(true);
     try {

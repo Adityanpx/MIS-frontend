@@ -20,6 +20,7 @@ import { usePlant } from '../plant-context';
 import { numOrNull, numOrUndef, SectionHeader, SectionSkeleton, str, useCanEditSettings } from './parts';
 import { apiErrors, checkBody, useSettings, useSettingsWrite } from './queries';
 import type { StockItemDto } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 type ItemForm = {
   name: string;
@@ -103,7 +104,7 @@ export function StockSection() {
           openingDate: v.openingDate ?? undefined,
           minLevel: numOrNull(v.minLevel),
         });
-        if (!c.ok) return setErrors(c.errors);
+        if (!c.ok) return setErrors(notifyInvalid(c.errors));
         await create.mutateAsync(c.data);
       } else {
         const i = form.item;
@@ -115,7 +116,7 @@ export function StockSection() {
         if (v.openingDate !== i.openingDate) body.openingDate = v.openingDate ?? undefined;
         if (v.reason.trim()) body.reason = v.reason.trim();
         const c = checkBody(stockItemPatchBody, body);
-        if (!c.ok) return setErrors(c.errors);
+        if (!c.ok) return setErrors(notifyInvalid(c.errors));
         await patch.mutateAsync({ itemId: i.id, body: c.data });
       }
       setForm(null);
@@ -130,7 +131,7 @@ export function StockSection() {
       qty: numOrUndef(adj.qty),
       reason: adj.reason,
     });
-    if (!c.ok) return setErrors(c.errors);
+    if (!c.ok) return setErrors(notifyInvalid(c.errors));
     try {
       await adjust.mutateAsync({ itemId: adj.item.id, body: c.data });
       setAdj(null);

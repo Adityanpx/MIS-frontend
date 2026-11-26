@@ -21,6 +21,7 @@ import { bgCreateBody, bgPatchBody, insuranceCreateBody, insurancePatchBody } fr
 import { SectionHeader, SectionSkeleton, str, useCanEditSettings } from './parts';
 import { apiErrors, checkBody, useSettings, useSettingsWrite } from './queries';
 import type { BankGuarantee, InsurancePolicy } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 type Kind = 'bank-guarantees' | 'insurance';
 type Entry = BankGuarantee | InsurancePolicy;
@@ -161,7 +162,7 @@ export function RegistersSection({ kind }: { kind: Kind }) {
           ? insurancePatchBody
           : insuranceCreateBody;
     const c = checkBody(schema as never, body);
-    if (!c.ok) return setErrors(c.errors);
+    if (!c.ok) return setErrors(notifyInvalid(c.errors));
     try {
       await write.mutateAsync({
         path: edit.entry ? `/${edit.entry.id}` : '',

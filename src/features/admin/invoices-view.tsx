@@ -56,6 +56,7 @@ import {
   withAll,
 } from './kit';
 import type { AdminInvoiceDetail, AdminInvoice, AdminPlant } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 const fyOptions = () => {
   const y = Number(fyLabel(todayIST()).slice(0, 4));
@@ -539,7 +540,7 @@ function TdsDialog({ inv, onClose }: { inv: AdminInvoiceDetail; onClose: () => v
   const { run, busy } = useRun();
   async function go() {
     const v = check(adminTdsBody, f);
-    if (!v.ok) return setErrors(v.errors);
+    if (!v.ok) return setErrors(notifyInvalid(v.errors));
     try {
       await run('tds', () => adminApi.post(`/invoices/${inv.id}/tds`, v.data), 'TDS recorded');
       onClose();
@@ -633,7 +634,7 @@ export function ManualInvoice() {
       issueNow,
       ...(notes.trim() ? { notes: notes.trim() } : {}),
     });
-    if (!v.ok) return setErrors(v.errors);
+    if (!v.ok) return setErrors(notifyInvalid(v.errors));
     setErrors({});
     try {
       const r = await run(

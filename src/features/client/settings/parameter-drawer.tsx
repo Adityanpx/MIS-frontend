@@ -44,6 +44,7 @@ import {
   type ParameterDto,
   type StandardKind,
 } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 const opt = (o: Record<string, string>) => Object.entries(o).map(([value, label]) => ({ value, label }));
 const AGG = {
@@ -293,8 +294,8 @@ export function ParameterDrawer({
       if (Object.keys(patch).length === 0) return toast.message('Nothing changed');
       c = checkBody(parameterPatchBody, patch);
     }
-    if (!c.ok) return setErrors(c.errors);
-    if (form.inputMode !== 'typed' && !check.ok) return setErrors({ formula: check.error ?? 'Invalid formula' });
+    if (!c.ok) return setErrors(notifyInvalid(c.errors));
+    if (form.inputMode !== 'typed' && !check.ok) return setErrors(notifyInvalid({ formula: check.error ?? 'Invalid formula' }));
     setErrors({});
     setBusy(true);
     try {

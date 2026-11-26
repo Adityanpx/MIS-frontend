@@ -25,6 +25,7 @@ import { userInviteBody, userPatchBody } from '@/shared/schemas/company';
 import { usePlants } from '../queries';
 import { apiErrors, checkBody } from '../settings/queries';
 import { ClientAdminOnly, type UserDto } from './company-api';
+import { notifyInvalid } from '@/lib/form-errors';
 
 type Status = 'all' | 'active' | 'invited' | 'disabled';
 const PAGE = 20;
@@ -99,7 +100,7 @@ function UserDrawer({
         isClientAdmin: v.isClientAdmin,
         plantRoles: v.isClientAdmin ? [] : roleList,
       });
-      if (!c.ok) return setErrors(c.errors);
+      if (!c.ok) return setErrors(notifyInvalid(c.errors));
       if (await run('save', () => clientApi.post('/company/users', c.data), `Invitation sent to ${v.email}`))
         onOpenChange(false);
       return;
@@ -110,7 +111,7 @@ function UserDrawer({
     if ((v.designation || null) !== user.designation) patch.designation = v.designation.trim() || null;
     if (v.isClientAdmin !== user.isClientAdmin) patch.isClientAdmin = v.isClientAdmin;
     const c = checkBody(userPatchBody, patch);
-    if (!c.ok) return setErrors(c.errors);
+    if (!c.ok) return setErrors(notifyInvalid(c.errors));
     const rolesChanged =
       JSON.stringify([...roleList].sort((a, b) => a.plantId.localeCompare(b.plantId))) !==
       JSON.stringify(

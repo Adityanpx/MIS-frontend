@@ -46,6 +46,7 @@ import type { SettingsGroup } from '@/shared/enums';
 import { superAdminCreateBody } from '@/shared/schemas/admin';
 import { adminApi, check, errorsOf, labelize, NameCell, STATE_OPTIONS, toastError, useA, useRun } from './kit';
 import type { SuperAdmin } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 // ---------------------------------------------------------------- field specs (mirror the API's strict schemas)
 
@@ -592,7 +593,7 @@ function InviteAdmin({ onClose }: { onClose: () => void }) {
       email: f.email.trim(),
       ...(f.mobile.trim() ? { mobile: f.mobile.trim() } : {}),
     });
-    if (!v.ok) return setErrors(v.errors);
+    if (!v.ok) return setErrors(notifyInvalid(v.errors));
     try {
       await run('invite', () => adminApi.post('/super-admins', v.data), 'Invitation sent');
       onClose();

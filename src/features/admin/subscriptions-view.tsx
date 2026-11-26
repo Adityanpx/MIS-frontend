@@ -39,6 +39,7 @@ import {
 } from './kit';
 import { ScheduleTable, YearlyAmounts } from './plants-view';
 import type { AdminSubscription } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 /** /admin/subscriptions — list, renew, extend, cancel (SUB-01…08). */
 export function SubscriptionsView() {
@@ -267,7 +268,7 @@ function SubDialog({ sub, kind, onClose }: { sub: AdminSubscription; kind: Dlg; 
 
   async function go() {
     const v = check<unknown>(cfg.schema, cfg.body);
-    if (!v.ok) return setErrors(v.errors);
+    if (!v.ok) return setErrors(notifyInvalid(v.errors));
     try {
       await run(kind, () => adminApi.post(cfg.path, v.data), cfg.ok);
       onClose();

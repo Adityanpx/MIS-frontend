@@ -13,6 +13,7 @@ import { usePlant } from '../plant-context';
 import { numOrNull, PanelCard, SectionHeader, SectionSkeleton, str, useCanEditSettings } from './parts';
 import { apiErrors, checkBody, useSettings, useSettingsWrite } from './queries';
 import type { CashSettings } from './types';
+import { notifyInvalid } from '@/lib/form-errors';
 
 /** §11.9 Site cash: opening balance, daily alert limit and petty-cash float (CSH-01…CSH-05). */
 export function CashSection() {
@@ -50,7 +51,7 @@ export function CashSection() {
     if (numOrNull(v.cashAlertLimit) !== d.cashAlertLimit) body.cashAlertLimit = numOrNull(v.cashAlertLimit);
     if (numOrNull(v.pettyFloat) !== d.pettyFloat) body.pettyFloat = numOrNull(v.pettyFloat);
     const c = checkBody(cashPatchBody, body);
-    if (!c.ok) return setErrors(c.errors);
+    if (!c.ok) return setErrors(notifyInvalid(c.errors));
     setErrors({});
     try {
       await save.mutateAsync(c.data);
