@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarPlus, Layers, RefreshCw, XCircle } from 'lucide-react';
+import { CalendarPlus, RefreshCw, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
@@ -16,11 +16,10 @@ import { Input, SearchInput, Textarea } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/misc';
 import { Select } from '@/components/ui/select';
 import { DataTable, Pagination } from '@/components/ui/table';
-import { Segmented } from '@/components/ui/tabs';
 import { diffDays, todayIST } from '@/lib/dates';
 import { fmtDate, fmtMoney } from '@/lib/format';
 import { SUBSCRIPTION_STATUSES } from '@/shared/enums';
-import { cancelSubscriptionBody, changePlanBody, extendSubscriptionBody, renewBody } from '@/shared/schemas/billing';
+import { cancelSubscriptionBody, extendSubscriptionBody, renewBody } from '@/shared/schemas/billing';
 import {
   ALL,
   adminApi,
@@ -38,10 +37,10 @@ import {
   useRun,
   withAll,
 } from './kit';
-import { ScheduleTable } from './plants-view';
-import type { AdminSubscription, Plan } from './types';
+import { ScheduleTable, YearlyAmounts } from './plants-view';
+import type { AdminSubscription } from './types';
 
-/** /admin/subscriptions — list, renew, extend, change plan, cancel (SUB-01…08). */
+/** /admin/subscriptions — list, renew, extend, cancel (SUB-01…08). */
 export function SubscriptionsView() {
   const sp = useSearchParams();
   const l = useListState({
@@ -103,9 +102,11 @@ export function SubscriptionsView() {
             { key: 'p', header: 'Plant', cell: (s) => <NameCell name={s.plantName} sub={s.clientName} /> },
             {
               key: 'plan',
-              header: 'Plan',
+              header: 'Term',
               hideBelow: 'md',
-              cell: (s) => <NameCell name={s.plan.name} sub={`${s.plan.termYears} yrs · ${s.billingMode}`} />,
+              cell: (s) => (
+                <NameCell name={`${s.plan.termYears} years`} sub={`${Number(s.plan.escalationPct)}% yearly hike`} />
+              ),
             },
             {
               key: 'per',
@@ -126,7 +127,7 @@ export function SubscriptionsView() {
             },
             {
               key: 'pr',
-              header: 'Price / yr',
+              header: 'Year 1 / yr',
               align: 'right',
               cell: (s) => (
                 <span className="inline-flex items-center gap-1">
@@ -151,7 +152,7 @@ export function SubscriptionsView() {
   );
 }
 
-type Dlg = 'renew' | 'extend' | 'plan' | 'cancel';
+type Dlg = 'renew' | 'extend' | 'cancel';
 function SubscriptionDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   const q = useA<AdminSubscription>(`/subscriptions/${id}`);
   const [dlg, setDlg] = useState<Dlg | null>(null);
@@ -162,7 +163,7 @@ function SubscriptionDrawer({ id, onClose }: { id: string; onClose: () => void }
       open
       width="xl"
       onOpenChange={(o) => !o && onClose()}
-      title={s ? `${s.plantName} · ${s.plan.name}` : 'Subscription'}
+      title={s ? `${s.plantName} · ${s.plan.termYears} years` : 'Subscription'}
       description={s && `${s.clientName} · ${fmtDate(s.startDate)} – ${fmtDate(s.endDate)}`}
       footer={
         s && (
@@ -172,9 +173,6 @@ function SubscriptionDrawer({ id, onClose }: { id: string; onClose: () => void }
             </Button>
             <Button variant="secondary" disabled={!live} onClick={() => setDlg('extend')}>
               <CalendarPlus /> Extend
-            </Button>
-            <Button variant="secondary" disabled={!live} onClick={() => setDlg('plan')}>
-              <Layers /> Change plan
             </Button>
             <Button variant="danger-soft" className="ml-auto" disabled={!live} onClick={() => setDlg('cancel')}>
               <XCircle /> Cancel
@@ -192,7 +190,8 @@ function SubscriptionDrawer({ id, onClose }: { id: string; onClose: () => void }
               <StatusBadge status={s.status} size="sm" />
             </Fact>
             <Fact label="Billing">{s.billingMode === 'upfront' ? 'Upfront' : 'Yearly'}</Fact>
-            <Fact label="Price per year">{fmtMoney(s.pricePerYear)}</Fact>
+            <Fact label="Year 1 amount">{fmtMoney(s.pricePerYear)}</Fact>
+            <Fact label="Yearly hike">{`${Number(s.plan.escalationPct)}%`}</Fact>
             <Fact label="Total (ex GST)">{fmtMoney(s.totalExGst)}</Fact>
             <Fact label="Plant" className="sm:col-span-2">
               <Link className="text-brand-500" href={`/admin/plants/${s.plantId}`}>
@@ -219,13 +218,11 @@ function SubscriptionDrawer({ id, onClose }: { id: string; onClose: () => void }
 }
 
 function SubDialog({ sub, kind, onClose }: { sub: AdminSubscription; kind: Dlg; onClose: () => void }) {
-  const plans = useA<Plan[]>('/plans', { status: 'active' });
   const [f, setF] = useState({
-    planId: sub.planId as string | undefined,
     startDate: null as string | null,
-    billingMode: sub.billingMode as 'yearly' | 'upfront',
-    customPricePerYear: '',
-    customReason: '',
+    termYears: String(sub.plan.termYears),
+    renewPrice: '',
+    escalationPct: String(Number(sub.plan.escalationPct)),
     addYears: '1',
     pricePerYear: '',
     reason: '',
@@ -246,11 +243,10 @@ function SubDialog({ sub, kind, onClose }: { sub: AdminSubscription; kind: Dlg; 
       path: '/subscriptions',
       body: {
         plantId: sub.plantId,
-        planId: f.planId,
         startDate: f.startDate ?? undefined,
-        billingMode: f.billingMode,
-        customPricePerYear: t(f.customPricePerYear),
-        customReason: t(f.customReason),
+        termYears: f.termYears,
+        pricePerYear: f.renewPrice.trim(),
+        escalationPct: f.escalationPct.trim() || '0',
       },
     },
     extend: {
@@ -259,13 +255,6 @@ function SubDialog({ sub, kind, onClose }: { sub: AdminSubscription; kind: Dlg; 
       schema: extendSubscriptionBody,
       path: `/subscriptions/${sub.id}/extend`,
       body: { addYears: f.addYears, pricePerYear: t(f.pricePerYear), reason },
-    },
-    plan: {
-      title: 'Change plan',
-      ok: 'Plan changed',
-      schema: changePlanBody,
-      path: `/subscriptions/${sub.id}/change-plan`,
-      body: { planId: f.planId, reason },
     },
     cancel: {
       title: 'Cancel subscription',
@@ -286,19 +275,6 @@ function SubDialog({ sub, kind, onClose }: { sub: AdminSubscription; kind: Dlg; 
       setErrors(errorsOf(e));
     }
   }
-  const planSelect = (
-    <Field label="Plan" required error={errors.planId}>
-      <Select
-        value={f.planId}
-        onValueChange={(v) => set('planId', v)}
-        options={(plans.data ?? []).map((p) => ({
-          value: p.id,
-          label: `${p.name} · ${p.termYears} yrs`,
-          hint: `${fmtMoney(p.pricePerYear)}/yr`,
-        }))}
-      />
-    </Field>
-  );
   const reasonField = (
     <Field label="Reason" required hint="At least 10 characters" error={errors.reason} className="sm:col-span-2">
       <Textarea rows={2} value={f.reason} onChange={(e) => set('reason', e.target.value)} />
@@ -326,32 +302,19 @@ function SubDialog({ sub, kind, onClose }: { sub: AdminSubscription; kind: Dlg; 
       <div className="grid gap-4 sm:grid-cols-2">
         {kind === 'renew' && (
           <>
-            {planSelect}
+            <Field label="Subscription (years)" required hint="1 to 15" error={errors.termYears}>
+              <Input inputMode="numeric" value={f.termYears} onChange={(e) => set('termYears', e.target.value)} />
+            </Field>
             <Field label="Start" hint={`Default: ${fmtDate(sub.endDate)} + 1 day`} error={errors.startDate}>
               <DateField value={f.startDate} onChange={(d) => set('startDate', d)} clearable />
             </Field>
-            <Field label="Billing">
-              <Segmented
-                value={f.billingMode}
-                onChange={(v) => set('billingMode', v)}
-                items={[
-                  { value: 'yearly', label: 'Yearly' },
-                  { value: 'upfront', label: 'Upfront' },
-                ]}
-              />
+            <Field label="Amount per year (₹, ex GST)" required hint="Year 1 of the renewal" error={errors.pricePerYear}>
+              <Input inputMode="decimal" value={f.renewPrice} onChange={(e) => set('renewPrice', e.target.value)} />
             </Field>
-            <Field label="Custom price / year (₹)" error={errors.customPricePerYear}>
-              <Input
-                inputMode="decimal"
-                value={f.customPricePerYear}
-                onChange={(e) => set('customPricePerYear', e.target.value)}
-              />
+            <Field label="Yearly hike (%)" error={errors.escalationPct}>
+              <Input inputMode="decimal" value={f.escalationPct} onChange={(e) => set('escalationPct', e.target.value)} />
             </Field>
-            {f.customPricePerYear.trim() && (
-              <Field label="Reason for custom price" required className="sm:col-span-2" error={errors.customReason}>
-                <Input value={f.customReason} onChange={(e) => set('customReason', e.target.value)} />
-              </Field>
-            )}
+            <YearlyAmounts years={f.termYears} price={f.renewPrice} hike={f.escalationPct} />
           </>
         )}
         {kind === 'extend' && (
@@ -366,13 +329,6 @@ function SubDialog({ sub, kind, onClose }: { sub: AdminSubscription; kind: Dlg; 
             >
               <Input inputMode="decimal" value={f.pricePerYear} onChange={(e) => set('pricePerYear', e.target.value)} />
             </Field>
-            {reasonField}
-          </>
-        )}
-        {kind === 'plan' && (
-          <>
-            {planSelect}
-            <p className="text-ink-500 text-sm">Only planned (not yet invoiced) years are re-priced.</p>
             {reasonField}
           </>
         )}

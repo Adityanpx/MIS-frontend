@@ -54,7 +54,7 @@ import {
   useRun,
   withAll,
 } from './kit';
-import type { AdminClient, AdminPlant, AdminPlantDetail, Plan, PlantPreview, ScheduleRow } from './types';
+import type { AdminClient, AdminPlant, AdminPlantDetail, PlantPreview, ScheduleRow } from './types';
 
 /** /admin/plants (PL-01) */
 export function PlantsList() {
@@ -168,11 +168,10 @@ interface WizardState {
   omStart: string | null;
   omTenureMonths: string;
   misStart: string | null;
-  planId: string | undefined;
   subStart: string | null;
-  billingMode: 'yearly' | 'upfront';
-  customPrice: string;
-  customReason: string;
+  termYears: string;
+  pricePerYear: string;
+  escalationPct: string;
 }
 
 /** /admin/plants/new — 4-step wizard: plant → contract → subscription → preview & create (PL-02, SUB-01). */
@@ -191,19 +190,16 @@ export function PlantWizard() {
     omStart: todayIST(),
     omTenureMonths: '60',
     misStart: null,
-    planId: undefined,
     subStart: null,
-    billingMode: 'yearly',
-    customPrice: '',
-    customReason: '',
+    termYears: '5',
+    pricePerYear: '',
+    escalationPct: '0',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<PlantPreview | null>(null);
-  const plans = useA<Plan[]>('/plans', { status: 'active' });
   const client = useA<AdminClient>(f.clientId ? `/clients/${f.clientId}` : null);
   const { run, busy } = useRun();
   const set = <K extends keyof WizardState>(k: K, v: WizardState[K]) => setF((s) => ({ ...s, [k]: v }));
-  const plan = plans.data?.find((p) => p.id === f.planId);
 
   const body = () => ({
     clientId: f.clientId,
@@ -217,12 +213,10 @@ export function PlantWizard() {
     omTenureMonths: f.omTenureMonths,
     ...(f.misStart ? { misStart: f.misStart } : {}),
     subscription: {
-      planId: f.planId,
       startDate: f.subStart ?? f.misStart ?? f.omStart,
-      billingMode: f.billingMode,
-      ...(f.customPrice.trim()
-        ? { customPricePerYear: f.customPrice.trim(), customReason: f.customReason.trim() }
-        : {}),
+      termYears: f.termYears,
+      pricePerYear: f.pricePerYear.trim(),
+      escalationPct: f.escalationPct.trim() || '0',
     },
   });
   const STEP_FIELDS = [
@@ -362,47 +356,44 @@ export function PlantWizard() {
             )}
             {step === 2 && (
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Plan" required error={errors['subscription.planId']} className="sm:col-span-2">
-                  <Select
-                    value={f.planId}
-                    onValueChange={(v) => set('planId', v)}
-                    invalid={!!errors['subscription.planId']}
-                    options={(plans.data ?? []).map((p) => ({
-                      value: p.id,
-                      label: `${p.name} · ${p.termYears} years`,
-                      hint: `${fmtMoney(p.pricePerYear)}/yr`,
-                    }))}
+                <Field label="Subscription (years)" required hint="1 to 15" error={errors['subscription.termYears']}>
+                  <Input
+                    inputMode="numeric"
+                    value={f.termYears}
+                    onChange={(e) => set('termYears', e.target.value)}
+                    invalid={!!errors['subscription.termYears']}
                   />
                 </Field>
                 <Field label="Subscription start" hint="Default: MIS start" error={errors['subscription.startDate']}>
                   <DateField value={f.subStart} onChange={(d) => set('subStart', d)} clearable />
                 </Field>
-                <Field label="Billing">
-                  <Segmented
-                    value={f.billingMode}
-                    onChange={(v) => set('billingMode', v)}
-                    items={[
-                      { value: 'yearly', label: 'Yearly' },
-                      { value: 'upfront', label: `Upfront${plan ? ` (−${plan.upfrontDiscountPct}%)` : ''}` },
-                    ]}
-                  />
-                </Field>
                 <Field
-                  label="Custom price per year (₹)"
-                  hint={plan ? `Plan price ${fmtMoney(plan.pricePerYear)}` : 'Optional'}
-                  error={errors['subscription.customPricePerYear']}
+                  label="Amount per year (₹, ex GST)"
+                  required
+                  hint="Year 1 charge for this client"
+                  error={errors['subscription.pricePerYear']}
                 >
                   <Input
                     inputMode="decimal"
-                    value={f.customPrice}
-                    onChange={(e) => set('customPrice', e.target.value)}
+                    value={f.pricePerYear}
+                    onChange={(e) => set('pricePerYear', e.target.value)}
+                    invalid={!!errors['subscription.pricePerYear']}
                   />
                 </Field>
-                {f.customPrice.trim() && (
-                  <Field label="Reason for the custom price" required error={errors['subscription.customReason']}>
-                    <Input value={f.customReason} onChange={(e) => set('customReason', e.target.value)} />
-                  </Field>
-                )}
+                <Field
+                  label="Yearly hike (%)"
+                  hint="Added every year on the previous year's amount"
+                  error={errors['subscription.escalationPct']}
+                >
+                  <Input
+                    inputMode="decimal"
+                    value={f.escalationPct}
+                    onChange={(e) => set('escalationPct', e.target.value)}
+                    invalid={!!errors['subscription.escalationPct']}
+                  />
+                </Field>
+                <YearlyAmounts years={f.termYears} price={f.pricePerYear} hike={f.escalationPct} />
+                <p className="text-ink-500 text-sm sm:col-span-2">Billed yearly: one invoice per subscription year.</p>
               </div>
             )}
             {step === 3 && preview && <PreviewPanel p={preview} />}
@@ -428,6 +419,32 @@ export function PlantWizard() {
   );
 }
 
+/** Live year-by-year amounts while typing (compounding hike). The server's preview is the final word. */
+export function YearlyAmounts({ years, price, hike }: { years: string; price: string; hike: string }) {
+  const n = Math.trunc(Number(years));
+  const base = Number(price);
+  const pct = Number(hike || 0);
+  if (!(n >= 1 && n <= 15) || !(base > 0) || !(pct >= 0)) return null;
+  const amounts = Array.from({ length: n }, (_, i) => Math.round(base * (1 + pct / 100) ** i * 100) / 100);
+  const total = amounts.reduce((a, b) => a + b, 0);
+  return (
+    <div className="rounded-inner bg-canvas sm:col-span-2 p-4">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
+        {amounts.map((a, i) => (
+          <div key={i} className="flex justify-between gap-3">
+            <span className="text-ink-500">Year {i + 1}</span>
+            <span className="font-medium tabular-nums">{fmtMoney(a.toFixed(2))}</span>
+          </div>
+        ))}
+      </div>
+      <div className="border-line mt-3 flex justify-between border-t pt-2 text-sm font-semibold">
+        <span>Total (ex GST)</span>
+        <span className="tabular-nums">{fmtMoney(total.toFixed(2))}</span>
+      </div>
+    </div>
+  );
+}
+
 function PreviewPanel({ p }: { p: PlantPreview }) {
   return (
     <div className="space-y-6">
@@ -439,7 +456,7 @@ function PreviewPanel({ p }: { p: PlantPreview }) {
       <div className="grid gap-5 sm:grid-cols-4">
         <Fact label="O&M">{`${fmtDate(p.plant.omStart)} – ${fmtDate(p.plant.omEnd)}`}</Fact>
         <Fact label="MIS start">{fmtDate(p.plant.misStart)}</Fact>
-        <Fact label="Plan">{`${p.subscription.planName} · ${p.subscription.termYears} yrs`}</Fact>
+        <Fact label="Subscription">{`${p.subscription.termYears} yrs · ${p.subscription.escalationPct}% yearly hike`}</Fact>
         <Fact label="Contract value (ex GST)">{fmtMoney(p.subscription.totalExGst)}</Fact>
       </div>
       <ScheduleTable rows={p.schedule} />
@@ -673,9 +690,11 @@ export function PlantDetail({ id }: { id: string }) {
             <EmptyState compact title="No subscription" />
           ) : (
             <div className="grid grid-cols-2 gap-5">
-              <Fact label="Plan" className="col-span-2">{`${s.plan.name} · ${s.plan.termYears} years`}</Fact>
+              <Fact label="Term" className="col-span-2">
+                {`${s.plan.termYears} years · ${Number(s.plan.escalationPct)}% yearly hike`}
+              </Fact>
               <Fact label="Period" className="col-span-2">{`${fmtDate(s.startDate)} – ${fmtDate(s.endDate)}`}</Fact>
-              <Fact label="Price per year">{fmtMoney(s.pricePerYear)}</Fact>
+              <Fact label="Year 1 amount">{fmtMoney(s.pricePerYear)}</Fact>
               <Fact label="Billing">{s.billingMode === 'upfront' ? 'Upfront' : 'Yearly'}</Fact>
               <Fact label="Status">
                 <StatusBadge status={s.status} size="sm" />

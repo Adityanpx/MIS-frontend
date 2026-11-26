@@ -83,7 +83,7 @@ export interface AdminSubscription {
   plantId: string;
   plantName: string;
   plantCode: string;
-  planId: string;
+  planId: string | null;
   plan: {
     name: string;
     code: string;
@@ -145,8 +145,8 @@ export interface PlantPreview {
   plant: { omStart: string; omTenureMonths: number; omEnd: string; misStart: string };
   contractYears: Array<{ yearNo: number; startDate: string; endDate: string; days: number }>;
   subscription: {
-    planName: string;
     termYears: number;
+    escalationPct: number;
     startDate: string;
     endDate: string;
     billingMode: string;
