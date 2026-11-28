@@ -9,7 +9,9 @@ import type {
   DashboardData,
   MisReport,
   Overview,
+  PortfolioIssue,
   PortfolioRow,
+  PortfolioSummary,
   ReportTable,
   TrendRow,
 } from './engine-types';
@@ -98,19 +100,20 @@ export function useSaveLayout(plantId: string) {
 
 export interface PortfolioResponse {
   reportDate: string;
+  /** Today in IST, per the server. */
+  today: string;
+  standard: 'bidding' | 'actual' | 'primary';
+  summary: PortfolioSummary;
   rows: PortfolioRow[];
-  exceptions: Array<{ plantId: string; type: string; detail: string }>;
+  issues: PortfolioIssue[];
 }
 
-export function usePortfolio(
-  date: string,
-  standard: 'bidding' | 'actual' | 'primary' = 'primary',
-) {
+export function usePortfolio(date: string, standard: 'bidding' | 'actual' | 'primary' = 'primary') {
   return useQuery({
     queryKey: qk.client.portfolio(date, standard),
-    queryFn: () =>
-      clientApi.get<PortfolioResponse>('/company/portfolio', { query: { date, standard } }),
+    queryFn: () => clientApi.get<PortfolioResponse>('/company/portfolio', { query: { date, standard } }),
     enabled: useSignedIn() && !!date,
     staleTime: 30_000,
+    placeholderData: keepPreviousData, // keep the screen while the next date loads
   });
 }

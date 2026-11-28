@@ -20,13 +20,7 @@ export type MonitoringTab = 'key' | 'chemicals' | 'compliance' | 'administrative
 export type BreakdownStatus = 'open' | 'in_progress' | 'awaiting_spares' | 'restored' | 'cancelled';
 export type Criticality = 'critical' | 'major' | 'minor';
 export type Impact = 'none' | 'reduced_capacity' | 'bypass' | 'plant_stopped';
-export type CauseCategory =
-  | 'mechanical'
-  | 'electrical'
-  | 'instrumentation'
-  | 'civil'
-  | 'operational'
-  | 'other';
+export type CauseCategory = 'mechanical' | 'electrical' | 'instrumentation' | 'civil' | 'operational' | 'other';
 
 // ---------------------------------------------------------------------------
 // Core value shapes
@@ -459,36 +453,109 @@ export interface DashboardData {
 // ---------------------------------------------------------------------------
 // Portfolio (v1.1)
 // ---------------------------------------------------------------------------
+export type IssueLevel = 'critical' | 'warning';
+export type IssueCategory = 'logsheet' | 'compliance' | 'chemicals' | 'admin' | 'maintenance' | 'account' | 'data';
+export type IssueType =
+  | 'MISSING_LOGSHEET'
+  | 'LOGSHEET_DRAFT'
+  | 'LOGSHEET_RETURNED'
+  | 'OUTLET_EXCEEDED'
+  | 'REGISTER_EXPIRED'
+  | 'REGISTER_EXPIRING'
+  | 'STOCK_NEGATIVE'
+  | 'STOCK_LOW'
+  | 'CASH_NEGATIVE'
+  | 'CASH_LOW'
+  | 'SAFETY_DEFICIT'
+  | 'CRITICAL_BREAKDOWN'
+  | 'BREAKDOWN_LONG_OPEN'
+  | 'ACCOUNT_RESTRICTED'
+  | 'DATA_UNAVAILABLE';
+
+/** One system-detected issue (backend src/modules/insights/portfolio.rows.ts). */
+export interface PortfolioIssue {
+  id: string;
+  plantId: string;
+  plantName: string;
+  plantCode: string;
+  level: IssueLevel;
+  category: IssueCategory;
+  type: IssueType;
+  title: string;
+  detail: string;
+}
+
+/** not_due: before MIS start / future date · not_live: setup pending, closed or suspended · unavailable: MIS failed. */
+export type PortfolioLogsheetStatus =
+  | 'draft'
+  | 'submitted'
+  | 'corrected'
+  | 'returned'
+  | 'checked'
+  | 'verified'
+  | 'missing'
+  | 'not_due'
+  | 'not_live'
+  | 'unavailable';
+export type PlantHealth = 'critical' | 'warning' | 'ok' | 'inactive';
+
 export interface PortfolioRow {
   plantId: string;
+  code: string;
   name: string;
   type: string;
   capacityMld: number;
+  city: string | null;
   accountState: string;
-  logsheetStatus: 'submitted' | 'draft' | 'missing' | 'not_allowed' | 'suspended';
+  setupStatus: string;
+  logsheetStatus: PortfolioLogsheetStatus;
+  hasData: boolean;
+  health: PlantHealth;
   key: {
-    inflowAct: number | null;
-    ebAct: number | null;
-    bgeAct: number | null;
-    dgAct: number | null;
-    revenueAct: number | null;
-    inflowResultToday: string | null;
-    ebResultToday: string | null;
-  };
-  chemicals: { aboveMtd: number; belowMin: number };
+    code: string;
+    name: string;
+    unit: string;
+    decimals: number;
+    today: { act: number | null; std: number | null; flag: Flag };
+    mtd: { act: number | null; std: number | null; flag: Flag };
+    resultPct: number | null;
+    resultText: string | null;
+  } | null;
+  /** ₹ million, month to date. */
+  revenue: { mtdAct: number | null; mtdStd: number | null; achievementPct: number | null } | null;
+  chemicals: { tracked: number; aboveStdMtd: number; belowMin: number };
   compliance: {
     outletToday: 'within' | 'exceeded' | 'no_data';
+    outletFailingToday: number;
     outletEventsMtd: number;
     worstRegister: 'ok' | 'expiring' | 'expired' | 'not_available';
   };
-  administrative: { staffAbsent: number; safetyDeficit: number; cashInHand: number | null };
+  administrative: {
+    staffAbsentToday: number | null;
+    safetyDeficit: number;
+    cashInHand: number | null;
+    cashAlertLimit: number | null;
+  };
   maintenance: {
+    enabled: boolean;
     openBreakdowns: number;
     criticalOpen: number;
     longestOpenDays: number | null;
+    /** fraction 0–1 */
     availabilityMtd: number | null;
   };
-  exceptions: number;
+  issues: { critical: number; warning: number };
+}
+
+export interface PortfolioSummary {
+  plants: number;
+  live: number;
+  logsheets: { expected: number; submitted: number; draft: number; returned: number; missing: number };
+  issues: { critical: number; warning: number; plantsAffected: number };
+  outletExceededPlants: number;
+  breakdowns: { open: number; critical: number };
+  /** ₹ million */
+  revenueMtd: { act: number; std: number; plants: number } | null;
 }
 
 // ---------------------------------------------------------------------------
